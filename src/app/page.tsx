@@ -8,7 +8,13 @@ export default function Home() {
   const [data, setData] = useState<string | null>(null);
 
   useEffect(() => {
-    nes();
+    fetch("/sample1.nes")
+      .then((response) => response.arrayBuffer())
+      .then((arraybuffer) => {
+        const rom = new Uint8Array(arraybuffer);
+        nes(rom);
+      });
+
     setData("start");
   }, []);
 

@@ -18,7 +18,7 @@ export default class CPU {
     a: 0,
     x: 0,
     y: 0,
-    pc: 0,
+    pc: 0x10,
     stackPointer: 0,
     status: 0,
   };
