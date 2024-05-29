@@ -1,4 +1,12 @@
-const OPCODES = {
+type Opcode = {
+  mnemonics: string[];
+  addressingMode: string;
+  cycles: number;
+  pageBoundaryCycle: boolean;
+  illegal: boolean;
+};
+
+const OPCODES: { [key: number]: Opcode } = {
   0x0: {
     mnemonics: ["BRK"],
     addressingMode: "implied",
@@ -13,7 +21,7 @@ const OPCODES = {
     pageBoundaryCycle: false,
     illegal: false,
   },
-  0x2: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0x2: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0x3: {
     mnemonics: ["SLO", "ASO"],
     addressingMode: "indirectX",
@@ -119,7 +127,7 @@ const OPCODES = {
     pageBoundaryCycle: true,
     illegal: false,
   },
-  0x12: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0x12: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0x13: {
     mnemonics: ["SLO", "ASO"],
     addressingMode: "indirectY",
@@ -225,7 +233,7 @@ const OPCODES = {
     pageBoundaryCycle: false,
     illegal: false,
   },
-  0x22: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0x22: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0x23: {
     mnemonics: ["RLA"],
     addressingMode: "indirectX",
@@ -331,7 +339,7 @@ const OPCODES = {
     pageBoundaryCycle: true,
     illegal: false,
   },
-  0x32: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0x32: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0x33: {
     mnemonics: ["RLA"],
     addressingMode: "indirectY",
@@ -437,7 +445,7 @@ const OPCODES = {
     pageBoundaryCycle: false,
     illegal: false,
   },
-  0x42: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0x42: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0x43: {
     mnemonics: ["SRE", "LSE"],
     addressingMode: "indirectX",
@@ -543,7 +551,7 @@ const OPCODES = {
     pageBoundaryCycle: true,
     illegal: false,
   },
-  0x52: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0x52: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0x53: {
     mnemonics: ["SRE", "LSE"],
     addressingMode: "indirectY",
@@ -649,7 +657,7 @@ const OPCODES = {
     pageBoundaryCycle: false,
     illegal: false,
   },
-  0x62: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0x62: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0x63: {
     mnemonics: ["RRA"],
     addressingMode: "indirectX",
@@ -755,7 +763,7 @@ const OPCODES = {
     pageBoundaryCycle: true,
     illegal: false,
   },
-  0x72: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0x72: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0x73: {
     mnemonics: ["RRA"],
     addressingMode: "indirectY",
@@ -973,7 +981,7 @@ const OPCODES = {
     pageBoundaryCycle: false,
     illegal: false,
   },
-  0x92: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0x92: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0x93: {
     mnemonics: ["SHA", "AHX", "AXA"],
     addressingMode: "indirectY",
@@ -1191,7 +1199,7 @@ const OPCODES = {
     pageBoundaryCycle: true,
     illegal: false,
   },
-  0xb2: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0xb2: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0xb3: {
     mnemonics: ["LAX"],
     addressingMode: "indirectY",
@@ -1409,7 +1417,7 @@ const OPCODES = {
     pageBoundaryCycle: true,
     illegal: false,
   },
-  0xd2: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0xd2: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0xd3: {
     mnemonics: ["DCP", "DCM"],
     addressingMode: "indirectY",
@@ -1627,7 +1635,7 @@ const OPCODES = {
     pageBoundaryCycle: true,
     illegal: false,
   },
-  0xf2: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
+  // 0xf2: { mnemonics: ["JAM", "KIL", "HLT"], illegal: true },
   0xf3: {
     mnemonics: ["ISC", "ISB", "INS"],
     addressingMode: "indirectY",
