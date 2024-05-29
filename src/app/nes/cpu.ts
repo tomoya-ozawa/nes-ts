@@ -1,4 +1,4 @@
-import Uint8 from "./Uint8";
+import { Bus } from "./nes";
 import OPCODES from "./opcodes";
 
 type Registers = {
@@ -10,20 +10,6 @@ type Registers = {
   status: number;
 };
 
-class RAM {
-  ram: { [key: number]: Uint8 } = {};
-
-  get(key: number): Uint8 {
-    return this.ram[key];
-  }
-
-  set(key: number, value: Uint8): void {
-    this.ram[key] = value;
-  }
-}
-
-const ram = new RAM();
-
 export default class CPU {
   registers: Registers = {
     a: 0,
@@ -34,11 +20,11 @@ export default class CPU {
     status: 0,
   };
 
-  public constructor(private rom: Uint8Array) {}
+  public constructor(private bus: Bus) {}
 
   public fetch() {
     this.registers.pc++;
-    return this.rom[this.registers.pc];
+    return this.bus.rom[this.registers.pc];
   }
 
   public execute(opcode: keyof typeof OPCODES) {
@@ -49,8 +35,8 @@ export default class CPU {
         this.registers.x = this.getValue(addressingMode);
       case mnemonics.includes("ISC"):
         const address = this.getValue(addressingMode);
-        const value = ram.get(address);
-        ram.set(address, value.add(1));
+        const value = this.bus.ram.get(address);
+        this.bus.ram.set(address, value.add(1));
     }
 
     this.registers.pc = this.registers.pc++;
