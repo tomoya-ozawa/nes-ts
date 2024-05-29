@@ -11,9 +11,11 @@ export default class NES {
   private bus!: Bus;
 
   public constructor(rom: Uint8Array) {
-    this.bus.rom = rom;
-    this.bus.ram = new RAM();
-    this.bus.cpu = new CPU(this.bus);
+    this.bus = {
+      rom: rom,
+      ram: new RAM(),
+      cpu: new CPU(this.bus),
+    };
 
     // const pgromEnd = 0x4000 * rom[0x04];
     // const chromEnd = 0x2000 * rom[0x05];
