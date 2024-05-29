@@ -57,7 +57,7 @@ export default class CPU {
           `${higher.toString(16)}${lower.toString(16)}`,
           16
         );
-        const absX = absoluteAddress + this.registers.pc;
+        const absX = absoluteAddress + this.registers.x;
         return absX;
     }
 
