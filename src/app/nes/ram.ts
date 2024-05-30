@@ -1,4 +1,4 @@
-import Uint8 from "./Uint8";
+import { Uint8 } from "./Int";
 
 export default class RAM {
   ram: { [key: number]: Uint8 } = {};

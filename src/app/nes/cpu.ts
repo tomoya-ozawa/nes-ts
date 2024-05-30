@@ -1,5 +1,6 @@
+import { Int8, Uint16, Uint8 } from "./Int";
 import { Bus } from "./nes";
-import OPCODES from "./opcodes";
+import OPCODES, { Opcode } from "./opcodes";
 
 type Registers = {
   a: number;
@@ -46,21 +47,49 @@ export default class CPU {
     return this.registers.pc;
   }
 
-  private getValue(mode: string): number {
-    switch (mode) {
-      case "immediate":
-        return this.fetch();
-      case "absoluteX":
-        const lower = this.fetch();
-        const higher = this.fetch();
-        const absoluteAddress = parseInt(
-          `${higher.toString(16)}${lower.toString(16)}`,
-          16
-        );
-        const absX = absoluteAddress + this.registers.x;
-        return absX;
-    }
+  // d,x	Zero page indexed	val = PEEK((arg + X) % 256)	4
+  // d,y	Zero page indexed	val = PEEK((arg + Y) % 256)	4
+  // a,x	Absolute indexed	val = PEEK(arg + X)	4+
+  // a,y	Absolute indexed	val = PEEK(arg + Y)	4+
+  // (d,x)	Indexed indirect	val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)	6
+  // (d),y	Indirect indexed	val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)	5+
 
-    throw Error("no value!");
+  private getValue(mode: Opcode["addressingMode"]): number {
+    switch (mode) {
+      case "implied":
+        return 0;
+      case "accumulator":
+        return this.registers.a;
+      case "immediate":
+      case "zeropage":
+        return this.fetch();
+      case "zeropageX":
+      case "zeropageY": {
+        const register =
+          mode === "zeropageX" ? this.registers.x : this.registers.y;
+        const uint8 = new Uint8(this.fetch());
+        const addedValue = uint8.add(register);
+        return addedValue.value;
+      }
+      case "relative": {
+        const relativeVal = new Int8(this.fetch());
+        return this.registers.pc + relativeVal.value;
+      }
+      case "indirect":
+      case "indirectX":
+      case "indirectY":
+      case "absolute": {
+        const uint16 = Uint16.fromBytes(this.fetch(), this.fetch());
+        return uint16.value;
+      }
+      case "absoluteX":
+      case "absoluteY": {
+        const register =
+          mode === "absoluteX" ? this.registers.x : this.registers.y;
+        const uint16 = Uint16.fromBytes(this.fetch(), this.fetch());
+        const absX = uint16.value + register;
+        return absX;
+      }
+    }
   }
 }

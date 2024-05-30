@@ -1,6 +1,19 @@
-type Opcode = {
+export type Opcode = {
   mnemonics: string[];
-  addressingMode: string;
+  addressingMode:
+    | "implied"
+    | "indirect"
+    | "indirectX"
+    | "indirectY"
+    | "zeropage"
+    | "zeropageX"
+    | "zeropageY"
+    | "immediate"
+    | "accumulator"
+    | "relative"
+    | "absolute"
+    | "absoluteX"
+    | "absoluteY";
   cycles: number;
   pageBoundaryCycle: boolean;
   illegal: boolean;
