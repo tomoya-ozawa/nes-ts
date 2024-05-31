@@ -14,8 +14,9 @@ export default class NES {
     this.bus = {
       rom: rom,
       ram: new RAM(),
-      cpu: new CPU(this.bus),
-    };
+    } as Bus;
+
+    this.bus.cpu = new CPU(this.bus);
 
     // const pgromEnd = 0x4000 * rom[0x04];
     // const chromEnd = 0x2000 * rom[0x05];
