@@ -11,7 +11,7 @@ class Bit {
     this.value = value & this.bitMask;
   }
 
-  public getValue(): number {
+  public toNumber(): number {
     return this.value;
   }
 
@@ -21,7 +21,7 @@ class Bit {
 
   public add(value: number | Bit): void {
     if (Bit.isBit(value)) {
-      this.value = (this.value + value.getValue()) & this.bitMask;
+      this.value = (this.value + value.toNumber()) & this.bitMask;
     } else {
       this.value = (this.value + value) & this.bitMask;
     }
@@ -67,11 +67,11 @@ export class Bit16 extends Bit {
 
   // 下位バイトと上位バイトからUint16を作成する静的メソッド
   public static fromBytes(lowerByte: Bit8, upperByte: Bit8): Bit16 {
-    const lowerVal = lowerByte.getValue();
+    const lowerVal = lowerByte.toNumber();
     if (!Number.isInteger(lowerVal) || lowerVal < 0 || lowerVal > 255) {
       throw new RangeError("Lower byte must be an integer between 0 and 255.");
     }
-    const upperVal = upperByte.getValue();
+    const upperVal = upperByte.toNumber();
     if (!Number.isInteger(upperVal) || upperVal < 0 || upperVal > 255) {
       throw new RangeError("Upper byte must be an integer between 0 and 255.");
     }

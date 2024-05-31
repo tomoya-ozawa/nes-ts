@@ -51,11 +51,11 @@ export default class CPU {
 
   public fetch(): Bit8 {
     this.registers.pc.inc();
-    return new Bit8(this.bus.rom[this.registers.pc.getValue()]);
+    return new Bit8(this.bus.rom[this.registers.pc.toNumber()]);
   }
 
   public execute() {
-    const opcode = this.fetch().getValue();
+    const opcode = this.fetch().toNumber();
     const { mnemonics, addressingMode } = OPCODES[opcode];
 
     switch (true) {
@@ -120,7 +120,7 @@ export default class CPU {
   }
 
   public getCounter(): number {
-    return this.registers.pc.getValue();
+    return this.registers.pc.toNumber();
   }
 
   // d,x	Zero page indexed	val = PEEK((arg + X) % 256)	4
@@ -135,29 +135,29 @@ export default class CPU {
       case "implied":
         return 0;
       case "accumulator":
-        return this.registers.a.getValue();
+        return this.registers.a.toNumber();
       case "immediate":
       case "zeropage":
-        return this.fetch().getValue();
+        return this.fetch().toNumber();
       case "zeropageX":
       case "zeropageY": {
         const register =
           mode === "zeropageX" ? this.registers.x : this.registers.y;
         const bit8 = this.fetch();
         bit8.add(register);
-        return bit8.getValue();
+        return bit8.toNumber();
       }
       case "relative": {
         const signedInt = this.fetch().getSignedInt();
         this.registers.pc.add(signedInt);
-        return this.registers.pc.getValue();
+        return this.registers.pc.toNumber();
       }
       case "indirect":
       case "indirectX":
       case "indirectY":
       case "absolute": {
         const bit16 = Bit16.fromBytes(this.fetch(), this.fetch());
-        return bit16.getValue();
+        return bit16.toNumber();
       }
       case "absoluteX":
       case "absoluteY": {
@@ -165,7 +165,7 @@ export default class CPU {
           mode === "absoluteX" ? this.registers.x : this.registers.y;
         const bit16 = Bit16.fromBytes(this.fetch(), this.fetch());
         bit16.add(register);
-        return bit16.getValue();
+        return bit16.toNumber();
       }
     }
   }
