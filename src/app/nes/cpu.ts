@@ -82,6 +82,8 @@ export default class CPU {
         this.bus.ram.set(address, value);
         break;
       }
+      default:
+        throw new Error("invalid opcode!" + opcode);
     }
 
     this.registers.pc.inc();
