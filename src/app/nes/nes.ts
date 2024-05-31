@@ -7,6 +7,8 @@ export type Bus = {
   rom: Uint8Array;
 };
 
+const NES_HEADER_SIZE = 0x10;
+
 export default class NES {
   private bus!: Bus;
 
@@ -18,10 +20,15 @@ export default class NES {
 
     this.bus.cpu = new CPU(this.bus);
 
-    // const pgromEnd = 0x4000 * rom[0x04];
-    // const chromEnd = 0x2000 * rom[0x05];
-    // const pgrom = rom.slice(0x10, pgromEnd);
-    // const chrom = rom.slice(pgromEnd + 1, chromEnd);
+    const pgRomSize = 0x4000 * rom[4];
+    const chRomSize = 0x2000 * rom[5];
+    const pgRomStartAddress = NES_HEADER_SIZE;
+    const pgRomEndAddress = NES_HEADER_SIZE + pgRomSize - 1;
+    const chRomStartAddress = pgRomEndAddress + 1;
+    const chRomEndAddress = chRomStartAddress + chRomSize;
+
+    const pgrom = rom.slice(pgRomStartAddress, pgRomEndAddress);
+    const chrom = rom.slice(chRomStartAddress, chRomEndAddress);
   }
 
   public start() {
