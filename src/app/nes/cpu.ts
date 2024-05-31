@@ -66,6 +66,7 @@ export default class CPU {
         this.registers.status.i = 1;
         break;
       case mnemonics.includes("BRK"):
+        this.registers.status.b = 1;
         break;
       case mnemonics.includes("TXS"):
         this.registers.stackPointer = this.registers.x;
