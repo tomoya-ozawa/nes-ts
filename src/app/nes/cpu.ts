@@ -54,7 +54,8 @@ export default class CPU {
     return new Bit8(this.bus.rom[this.registers.pc.getValue()]);
   }
 
-  public execute(opcode: keyof typeof OPCODES) {
+  public execute() {
+    const opcode = this.fetch().getValue();
     const { mnemonics, addressingMode } = OPCODES[opcode];
 
     switch (true) {
@@ -109,10 +110,12 @@ export default class CPU {
         break;
       }
       default:
-        throw new Error("invalid opcode!" + opcode.toString(16));
+        throw new Error(
+          `invalid opcode! ${opcode.toString(
+            16
+          )} , ${this.registers.pc.toHexString()}`
+        );
     }
-
-    this.registers.pc.inc();
   }
 
   public getCounter(): number {

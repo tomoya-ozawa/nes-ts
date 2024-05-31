@@ -25,14 +25,8 @@ export default class NES {
   }
 
   public start() {
-    const timeoutId = setInterval(() => {
-      const opcode = this.bus.rom[this.bus.cpu.getCounter()];
-      try {
-        this.bus.cpu.execute(opcode);
-      } catch (e) {
-        console.error(e);
-        clearInterval(timeoutId);
-      }
-    }, 0);
+    while (true) {
+      this.bus.cpu.execute();
+    }
   }
 }
