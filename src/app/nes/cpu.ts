@@ -58,6 +58,9 @@ export default class CPU {
     const { mnemonics, addressingMode } = OPCODES[opcode];
 
     switch (true) {
+      case mnemonics.includes("INS"):
+        this.registers.status.i = 1;
+        break;
       case mnemonics.includes("SEI"):
         this.registers.status.i = 1;
         break;
@@ -72,9 +75,16 @@ export default class CPU {
       case mnemonics.includes("LDX"):
         this.registers.x = new Bit8(this.getValue(addressingMode));
         break;
+      case mnemonics.includes("LDY"):
+        this.registers.y = new Bit8(this.getValue(addressingMode));
+        break;
       case mnemonics.includes("STA"):
         this.bus.ram.set(this.getValue(addressingMode), this.registers.a);
         break;
+      case mnemonics.includes("INX"): {
+        this.registers.x.inc();
+        break;
+      }
       case mnemonics.includes("ISC"): {
         const address = this.getValue(addressingMode);
         const value = this.bus.ram.get(address);
@@ -82,8 +92,24 @@ export default class CPU {
         this.bus.ram.set(address, value);
         break;
       }
+      case mnemonics.includes("DEY"): {
+        this.registers.y.dec();
+        break;
+      }
+      case mnemonics.includes("BNE"): {
+        const relative = new Bit8(this.getValue(addressingMode)).getSignedInt();
+        if (this.registers.status.z === 0) {
+          this.registers.pc.add(relative);
+        }
+        break;
+      }
+      case mnemonics.includes("JSR"): {
+        const address = this.getValue(addressingMode);
+        this.registers.pc = new Bit16(address);
+        break;
+      }
       default:
-        throw new Error("invalid opcode!" + opcode);
+        throw new Error("invalid opcode!" + opcode.toString(16));
     }
 
     this.registers.pc.inc();
