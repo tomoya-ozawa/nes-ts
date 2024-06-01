@@ -15,6 +15,7 @@ abstract class Bit {
     return this.value;
   }
 
+  // TODO: キャリーとoverflowの判定処理
   public add(value: number | Bit): Bit {
     const numValue = Bit.isBit(value) ? value.toNumber() : value;
     return this.clone((this.value + numValue) & this.bitMask);
