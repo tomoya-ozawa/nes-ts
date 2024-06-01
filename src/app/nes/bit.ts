@@ -1,9 +1,9 @@
-class Bit {
+abstract class Bit {
   public static isBit(value: unknown): value is Bit {
     return value instanceof Bit;
   }
 
-  protected value: number;
+  protected readonly value: number;
   protected bitMask: number;
 
   constructor(value: number, bitMask: number) {
@@ -15,32 +15,22 @@ class Bit {
     return this.value;
   }
 
-  public setValue(value: number): void {
-    this.value = value & this.bitMask;
-  }
-
   public add(value: number | Bit): Bit {
-    if (Bit.isBit(value)) {
-      this.value = (this.value + value.toNumber()) & this.bitMask;
-    } else {
-      this.value = (this.value + value) & this.bitMask;
-    }
-    return this;
+    const numValue = Bit.isBit(value) ? value.toNumber() : value;
+    return this.clone((this.value + numValue) & this.bitMask);
   }
 
   public inc(): Bit {
-    this.add(1);
-    return this;
+    return this.add(1);
   }
 
-  public subtract(value: number): Bit {
-    this.value = (this.value - value) & this.bitMask;
-    return this;
+  public subtract(value: number | Bit): Bit {
+    const numValue = Bit.isBit(value) ? value.toNumber() : value;
+    return this.clone((this.value - numValue) & this.bitMask);
   }
 
   public dec(): Bit {
-    this.subtract(1);
-    return this;
+    return this.subtract(1);
   }
 
   public toHexString(): string {
@@ -55,6 +45,10 @@ class Bit {
     } else {
       return this.value;
     }
+  }
+
+  private clone(value: number) {
+    return this.constructor(value);
   }
 }
 
