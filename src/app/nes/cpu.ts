@@ -766,7 +766,6 @@ export default class CPU {
     throw new Error("unimplemented instruction" + opcode.toString(16));
   }
 
-  // TODO: 即値とアドレスを判定する
   private lda(
     opcode: number,
     addressingMode:
@@ -780,10 +779,12 @@ export default class CPU {
       | "indirectY"
       | "indirectX"
   ) {
-    this.registers.a = new Bit8(this.getOperand(addressingMode));
+    const operand = new Bit8(this.getOperand(addressingMode));
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
+    this.registers.a = value;
   }
 
-  // TODO: 即値とアドレスを判定する
   private ldx(
     opcode: number,
     addressingMode:
@@ -793,10 +794,12 @@ export default class CPU {
       | "absolute"
       | "absoluteY"
   ) {
-    this.registers.x = new Bit8(this.getOperand(addressingMode));
+    const operand = new Bit8(this.getOperand(addressingMode));
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
+    this.registers.x = value;
   }
 
-  // TODO: 即値とアドレスを判定する
   private ldy(
     opcode: number,
     addressingMode:
@@ -806,10 +809,12 @@ export default class CPU {
       | "absolute"
       | "absoluteX"
   ) {
-    this.registers.y = new Bit8(this.getOperand(addressingMode));
+    const operand = new Bit8(this.getOperand(addressingMode));
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
+    this.registers.y = value;
   }
 
-  // TODO: 即値とアドレスを判定する
   private sta(
     opcode: number,
     addressingMode:
@@ -824,7 +829,6 @@ export default class CPU {
     this.bus.ram.set(this.getOperand(addressingMode), this.registers.a);
   }
 
-  // TODO: 即値とアドレスを判定する
   private stx(
     opcode: number,
     addressingMode: "indirectX" | "zeropage" | "absolute" | "zeropageY"
@@ -832,7 +836,6 @@ export default class CPU {
     this.bus.ram.set(this.getOperand(addressingMode), this.registers.x);
   }
 
-  // TODO: 即値とアドレスを判定する
   private sty(
     opcode: number,
     addressingMode: "indirectX" | "zeropage" | "absolute" | "zeropageX"
