@@ -49,7 +49,8 @@ abstract class Bit {
   }
 
   private clone(value: number) {
-    return this.constructor(value);
+    const ctor = this.constructor as any;
+    return new ctor(value);
   }
 }
 
