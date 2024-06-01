@@ -50,12 +50,14 @@ export default class CPU {
   public constructor(private bus: Bus) {}
 
   public fetch(): Bit8 {
+    const op = this.bus.rom[this.registers.pc.toNumber()];
     this.registers.pc = this.registers.pc.inc();
-    return new Bit8(this.bus.rom[this.registers.pc.toNumber()]);
+    return new Bit8(op);
   }
 
   public execute() {
     const opcode = this.fetch().toNumber();
+    console.log(opcode);
 
     switch (opcode) {
       case 0x00:
