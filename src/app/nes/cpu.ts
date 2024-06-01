@@ -702,7 +702,7 @@ export default class CPU {
   }
 
   private jmp(opcode: number, addressingMode: "absolute" | "indirect") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.pc = this.getOperand(addressingMode);
   }
 
   private adc(
@@ -1061,9 +1061,18 @@ export default class CPU {
           mode === "zeropageX" ? this.registers.x : this.registers.y;
         return this.fetch().add(register);
       }
-      case "indirect":
+      //アドレス「アドレス「IM8 + X」の16bit値」の8bit値
       case "indirectX":
-      case "indirectY":
+      // アドレス「アドレス「IM8」の16bit値 + Y」の8bit値を
+      case "indirectY": {
+        throw new Error("implement indirect!!");
+      }
+      case "indirect": {
+        const address = Bit16.fromBytes(this.fetch(), this.fetch());
+        const lower = this.bus.ram.get(address);
+        const upper = this.bus.ram.get(address.add(1));
+        return Bit16.fromBytes(lower, upper);
+      }
       case "absolute": {
         const bit16 = Bit16.fromBytes(this.fetch(), this.fetch());
         return bit16;
