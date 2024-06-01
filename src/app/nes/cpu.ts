@@ -50,7 +50,7 @@ export default class CPU {
   public constructor(private bus: Bus) {}
 
   public fetch(): Bit8 {
-    this.registers.pc.inc();
+    this.registers.pc = this.registers.pc.inc();
     return new Bit8(this.bus.rom[this.registers.pc.toNumber()]);
   }
 
@@ -939,15 +939,15 @@ export default class CPU {
   }
 
   private inx(opcode: number, addressingMode: "implied") {
-    this.registers.x.inc();
+    this.registers.x = this.registers.x.inc();
   }
 
   private iny(opcode: number, addressingMode: "implied") {
-    this.registers.y.inc();
+    this.registers.y = this.registers.y.inc();
   }
 
   private dey(opcode: number, addressingMode: "implied") {
-    this.registers.y.dec();
+    this.registers.y = this.registers.y.dec();
   }
 
   private bne(opcode: number, addressingMode: "relative") {
