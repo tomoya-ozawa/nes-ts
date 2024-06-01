@@ -19,24 +19,28 @@ class Bit {
     this.value = value & this.bitMask;
   }
 
-  public add(value: number | Bit): void {
+  public add(value: number | Bit): Bit {
     if (Bit.isBit(value)) {
       this.value = (this.value + value.toNumber()) & this.bitMask;
     } else {
       this.value = (this.value + value) & this.bitMask;
     }
+    return this;
   }
 
-  public inc(): void {
+  public inc(): Bit {
     this.add(1);
+    return this;
   }
 
-  public subtract(value: number): void {
+  public subtract(value: number): Bit {
     this.value = (this.value - value) & this.bitMask;
+    return this;
   }
 
-  public dec(): void {
+  public dec(): Bit {
     this.subtract(1);
+    return this;
   }
 
   public toHexString(): string {

@@ -136,6 +136,7 @@ export default class CPU {
         return 0;
       case "accumulator":
         return this.registers.a.toNumber();
+      case "relative":
       case "immediate":
       case "zeropage":
         return this.fetch().toNumber();
@@ -143,14 +144,7 @@ export default class CPU {
       case "zeropageY": {
         const register =
           mode === "zeropageX" ? this.registers.x : this.registers.y;
-        const bit8 = this.fetch();
-        bit8.add(register);
-        return bit8.toNumber();
-      }
-      case "relative": {
-        const signedInt = this.fetch().getSignedInt();
-        this.registers.pc.add(signedInt);
-        return this.registers.pc.toNumber();
+        return this.fetch().add(register).toNumber();
       }
       case "indirect":
       case "indirectX":
