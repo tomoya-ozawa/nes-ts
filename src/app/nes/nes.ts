@@ -38,7 +38,7 @@ export default class NES {
       } catch (e) {
         clearInterval(id);
         console.error(e);
-        console.log(this.bus.cpu.registers);
+        console.log(this.bus);
       }
     }, 0);
   }
