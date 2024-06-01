@@ -783,6 +783,7 @@ export default class CPU {
     const value =
       addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
     this.registers.a = value;
+    this.updateStatus(value, ["n", "z"]);
   }
 
   private ldx(
@@ -798,6 +799,7 @@ export default class CPU {
     const value =
       addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
     this.registers.x = value;
+    this.updateStatus(value, ["n", "z"]);
   }
 
   private ldy(
@@ -813,6 +815,7 @@ export default class CPU {
     const value =
       addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
     this.registers.y = value;
+    this.updateStatus(value, ["n", "z"]);
   }
 
   private sta(
@@ -959,6 +962,14 @@ export default class CPU {
     const relative = new Bit8(this.getOperand(addressingMode)).getSignedInt();
     if (this.registers.status.z === 0) {
       this.registers.pc.add(relative);
+    }
+  }
+
+  private updateStatus(value: Bit8, updateFlags: Array<"n" | "z">) {
+    if (updateFlags.includes("n")) {
+    }
+    if (updateFlags.includes("z")) {
+      this.registers.status.z = value.toNumber() === 0 ? 1 : 0;
     }
   }
 
