@@ -32,8 +32,14 @@ export default class NES {
   }
 
   public start() {
-    while (true) {
-      this.bus.cpu.execute();
-    }
+    const id = setInterval(() => {
+      try {
+        this.bus.cpu.execute();
+      } catch (e) {
+        clearInterval(id);
+        console.error(e);
+        console.log(this.bus.cpu.registers);
+      }
+    }, 0);
   }
 }
