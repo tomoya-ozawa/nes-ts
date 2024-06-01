@@ -607,7 +607,7 @@ export default class CPU {
   // TODO: スタックへのpush
   private jsr(opcode: number, addressingMode: "relative" | "absolute") {
     const address = this.getOperand(addressingMode);
-    this.registers.pc = new Bit16(address);
+    this.registers.pc = address;
   }
 
   private and(
@@ -779,7 +779,7 @@ export default class CPU {
       | "indirectY"
       | "indirectX"
   ) {
-    const operand = new Bit8(this.getOperand(addressingMode));
+    const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
     this.registers.a = value;
@@ -795,7 +795,7 @@ export default class CPU {
       | "absolute"
       | "absoluteY"
   ) {
-    const operand = new Bit8(this.getOperand(addressingMode));
+    const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
     this.registers.x = value;
@@ -811,7 +811,7 @@ export default class CPU {
       | "absolute"
       | "absoluteX"
   ) {
-    const operand = new Bit8(this.getOperand(addressingMode));
+    const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
     this.registers.y = value;
@@ -959,7 +959,7 @@ export default class CPU {
   }
 
   private bne(opcode: number, addressingMode: "relative") {
-    const relative = new Bit8(this.getOperand(addressingMode)).getSignedInt();
+    const relative = this.getOperand(addressingMode).getSignedInt();
     if (this.registers.status.z === 0) {
       this.registers.pc.add(relative);
     }
@@ -1045,28 +1045,28 @@ export default class CPU {
   // (d,x)	Indexed indirect	val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)	6
   // (d),y	Indirect indexed	val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)	5+
 
-  private getOperand(mode: Opcode["addressingMode"]): number {
+  private getOperand(
+    mode: Exclude<Opcode["addressingMode"], "implied">
+  ): Bit8 | Bit16 {
     switch (mode) {
-      case "implied":
-        return 0;
       case "accumulator":
-        return this.registers.a.toNumber();
+        return this.registers.a;
       case "relative":
       case "immediate":
       case "zeropage":
-        return this.fetch().toNumber();
+        return this.fetch();
       case "zeropageX":
       case "zeropageY": {
         const register =
           mode === "zeropageX" ? this.registers.x : this.registers.y;
-        return this.fetch().add(register).toNumber();
+        return this.fetch().add(register);
       }
       case "indirect":
       case "indirectX":
       case "indirectY":
       case "absolute": {
         const bit16 = Bit16.fromBytes(this.fetch(), this.fetch());
-        return bit16.toNumber();
+        return bit16;
       }
       case "absoluteX":
       case "absoluteY": {
@@ -1074,7 +1074,7 @@ export default class CPU {
           mode === "absoluteX" ? this.registers.x : this.registers.y;
         const bit16 = Bit16.fromBytes(this.fetch(), this.fetch());
         bit16.add(register);
-        return bit16.toNumber();
+        return bit16;
       }
     }
   }

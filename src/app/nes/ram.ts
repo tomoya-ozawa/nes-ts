@@ -1,11 +1,12 @@
 import { Bit16, Bit8 } from "./bit";
 
 export default class RAM {
-  ram: { [key: number]: Bit8 } = {};
+  ram: { [key: number]: Bit8 | undefined } = {};
 
   get(key: number | Bit8 | Bit16): Bit8 {
     const address = Bit16.isBit(key) ? key.toNumber() : key;
-    return this.ram[address];
+    const data = this.ram[address];
+    return data ? data : new Bit8();
   }
 
   set(key: number | Bit8 | Bit16, value: Bit8): void {
