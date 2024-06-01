@@ -604,7 +604,7 @@ export default class CPU {
 
   // TODO: スタックへのpush
   private jsr(opcode: number, addressingMode: "relative" | "absolute") {
-    const address = this.getValue(addressingMode);
+    const address = this.getOperand(addressingMode);
     this.registers.pc = new Bit16(address);
   }
 
@@ -778,7 +778,7 @@ export default class CPU {
       | "indirectY"
       | "indirectX"
   ) {
-    this.registers.a = new Bit8(this.getValue(addressingMode));
+    this.registers.a = new Bit8(this.getOperand(addressingMode));
   }
 
   // TODO: 即値とアドレスを判定する
@@ -791,7 +791,7 @@ export default class CPU {
       | "absolute"
       | "absoluteY"
   ) {
-    this.registers.x = new Bit8(this.getValue(addressingMode));
+    this.registers.x = new Bit8(this.getOperand(addressingMode));
   }
 
   // TODO: 即値とアドレスを判定する
@@ -804,7 +804,7 @@ export default class CPU {
       | "absolute"
       | "absoluteX"
   ) {
-    this.registers.y = new Bit8(this.getValue(addressingMode));
+    this.registers.y = new Bit8(this.getOperand(addressingMode));
   }
 
   // TODO: 即値とアドレスを判定する
@@ -819,7 +819,7 @@ export default class CPU {
       | "indirectY"
       | "zeropageX"
   ) {
-    this.bus.ram.set(this.getValue(addressingMode), this.registers.a);
+    this.bus.ram.set(this.getOperand(addressingMode), this.registers.a);
   }
 
   // TODO: 即値とアドレスを判定する
@@ -827,7 +827,7 @@ export default class CPU {
     opcode: number,
     addressingMode: "indirectX" | "zeropage" | "absolute" | "zeropageY"
   ) {
-    this.bus.ram.set(this.getValue(addressingMode), this.registers.x);
+    this.bus.ram.set(this.getOperand(addressingMode), this.registers.x);
   }
 
   // TODO: 即値とアドレスを判定する
@@ -835,7 +835,7 @@ export default class CPU {
     opcode: number,
     addressingMode: "indirectX" | "zeropage" | "absolute" | "zeropageX"
   ) {
-    this.bus.ram.set(this.getValue(addressingMode), this.registers.y);
+    this.bus.ram.set(this.getOperand(addressingMode), this.registers.y);
   }
 
   private bcc(opcode: number, addressingMode: "relative") {
@@ -951,7 +951,7 @@ export default class CPU {
   }
 
   private bne(opcode: number, addressingMode: "relative") {
-    const relative = new Bit8(this.getValue(addressingMode)).getSignedInt();
+    const relative = new Bit8(this.getOperand(addressingMode)).getSignedInt();
     if (this.registers.status.z === 0) {
       this.registers.pc.add(relative);
     }
@@ -1029,7 +1029,7 @@ export default class CPU {
   // (d,x)	Indexed indirect	val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)	6
   // (d),y	Indirect indexed	val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)	5+
 
-  private getValue(mode: Opcode["addressingMode"]): number {
+  private getOperand(mode: Opcode["addressingMode"]): number {
     switch (mode) {
       case "implied":
         return 0;
