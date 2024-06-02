@@ -34,7 +34,7 @@ export default class CPU {
     a: new Bit8Register(new Bit8(0)),
     x: new Bit8Register(new Bit8(0)),
     y: new Bit8Register(new Bit8(0)),
-    pc: new Bit16Register(new Bit8(0x10)),
+    pc: new Bit16Register(new Bit16(0x10)),
     stackPointer: new Bit8Register(new Bit8(0)),
     status: {
       n: 0,
@@ -757,6 +757,7 @@ export default class CPU {
 
   private txs(opcode: number, addressingMode: "implied") {
     this.registers.stackPointer = this.registers.x;
+    this.updateStatus(this.registers.stackPointer.get(), ["n", "z"]);
   }
 
   private tya(opcode: number, addressingMode: "implied") {
@@ -955,18 +956,17 @@ export default class CPU {
 
   private iny(opcode: number, addressingMode: "implied") {
     const value = this.registers.y.get().inc();
-    this.registers.x.set(value);
+    this.registers.y.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
 
   private dey(opcode: number, addressingMode: "implied") {
     const value = this.registers.y.get().dec();
-    this.registers.x.set(value);
+    this.registers.y.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
 
   private bne(opcode: number, addressingMode: "relative") {
-    console.log(opcode);
     const relative = this.getOperand(addressingMode).getSignedInt();
     if (this.registers.status.z === 0) {
       this.registers.pc.set(this.registers.pc.get().add(relative));

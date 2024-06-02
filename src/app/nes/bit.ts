@@ -1,4 +1,4 @@
-abstract class Bit {
+export abstract class Bit {
   public static isBit(value: unknown): value is Bit {
     return value instanceof Bit;
   }
