@@ -1,13 +1,14 @@
 import { Bit8, Bit16 } from "./bit";
 import { Bus } from "./nes";
 import OPCODES, { Opcode } from "./opcodes";
+import { Bit16Register, Bit8Register } from "./registers";
 
 type Registers = {
-  a: Bit8;
-  x: Bit8;
-  y: Bit8;
-  pc: Bit16;
-  stackPointer: Bit8;
+  a: Bit8Register;
+  x: Bit8Register;
+  y: Bit8Register;
+  pc: Bit16Register;
+  stackPointer: Bit8Register;
   status: {
     // 7	N	ネガティブ	Aの7ビット目と同じになります。負数の判定用。
     n: 1 | 0;
@@ -30,11 +31,11 @@ type Registers = {
 
 export default class CPU {
   registers: Registers = {
-    a: new Bit8(0),
-    x: new Bit8(0),
-    y: new Bit8(0),
-    pc: new Bit16(0x10),
-    stackPointer: new Bit8(0),
+    a: new Bit8Register(new Bit8(0)),
+    x: new Bit8Register(new Bit8(0)),
+    y: new Bit8Register(new Bit8(0)),
+    pc: new Bit16Register(new Bit8(0x10)),
+    stackPointer: new Bit8Register(new Bit8(0)),
     status: {
       n: 0,
       v: 0,
@@ -50,8 +51,8 @@ export default class CPU {
   public constructor(private bus: Bus) {}
 
   public fetch(): Bit8 {
-    const op = this.bus.rom[this.registers.pc.toNumber()];
-    this.registers.pc = this.registers.pc.inc();
+    const op = this.bus.rom[this.registers.pc.get().toNumber()];
+    this.registers.pc.set(this.registers.pc.get().inc());
     return new Bit8(op);
   }
 
@@ -549,9 +550,9 @@ export default class CPU {
         return this.illegal(0xff);
       default:
         throw new Error(
-          `invalid opcode! ${opcode.toString(
-            16
-          )} , ${this.registers.pc.toHexString()}`
+          `invalid opcode! ${opcode.toString(16)} , ${this.registers.pc
+            .get()
+            .toHexString()}`
         );
     }
   }
@@ -702,7 +703,7 @@ export default class CPU {
   }
 
   private jmp(opcode: number, addressingMode: "absolute" | "indirect") {
-    this.registers.pc = this.getOperand(addressingMode);
+    this.registers.pc.set(this.getOperand(addressingMode));
   }
 
   private adc(
@@ -782,7 +783,7 @@ export default class CPU {
     const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
-    this.registers.a = value;
+    this.registers.a.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
 
@@ -798,7 +799,7 @@ export default class CPU {
     const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
-    this.registers.x = value;
+    this.registers.x.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
 
@@ -814,7 +815,7 @@ export default class CPU {
     const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
-    this.registers.y = value;
+    this.registers.y.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
 
@@ -829,21 +830,21 @@ export default class CPU {
       | "indirectY"
       | "zeropageX"
   ) {
-    this.bus.ram.set(this.getOperand(addressingMode), this.registers.a);
+    this.bus.ram.set(this.getOperand(addressingMode), this.registers.a.get());
   }
 
   private stx(
     opcode: number,
     addressingMode: "indirectX" | "zeropage" | "absolute" | "zeropageY"
   ) {
-    this.bus.ram.set(this.getOperand(addressingMode), this.registers.x);
+    this.bus.ram.set(this.getOperand(addressingMode), this.registers.x.get());
   }
 
   private sty(
     opcode: number,
     addressingMode: "indirectX" | "zeropage" | "absolute" | "zeropageX"
   ) {
-    this.bus.ram.set(this.getOperand(addressingMode), this.registers.y);
+    this.bus.ram.set(this.getOperand(addressingMode), this.registers.y.get());
   }
 
   private bcc(opcode: number, addressingMode: "relative") {
@@ -947,20 +948,20 @@ export default class CPU {
   }
 
   private inx(opcode: number, addressingMode: "implied") {
-    const value = this.registers.x.inc();
-    this.registers.x = value;
+    const value = this.registers.x.get().inc();
+    this.registers.x.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
 
   private iny(opcode: number, addressingMode: "implied") {
-    const value = this.registers.y.inc();
-    this.registers.x = value;
+    const value = this.registers.y.get().inc();
+    this.registers.x.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
 
   private dey(opcode: number, addressingMode: "implied") {
-    const value = this.registers.y.dec();
-    this.registers.x = value;
+    const value = this.registers.y.get().dec();
+    this.registers.x.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
 
@@ -968,7 +969,7 @@ export default class CPU {
     console.log(opcode);
     const relative = this.getOperand(addressingMode).getSignedInt();
     if (this.registers.status.z === 0) {
-      this.registers.pc = this.registers.pc.add(relative);
+      this.registers.pc.set(this.registers.pc.get().add(relative));
     }
   }
 
@@ -1067,7 +1068,7 @@ export default class CPU {
       case "zeropageY": {
         const register =
           mode === "zeropageX" ? this.registers.x : this.registers.y;
-        return this.fetch().add(register);
+        return this.fetch().add(register.get());
       }
       //アドレス「アドレス「IM8 + X」の16bit値」の8bit値
       case "indirectX":
@@ -1088,7 +1089,7 @@ export default class CPU {
       case "absoluteY": {
         const register =
           mode === "absoluteX" ? this.registers.x : this.registers.y;
-        return Bit16.fromBytes(this.fetch(), this.fetch()).add(register);
+        return Bit16.fromBytes(this.fetch(), this.fetch()).add(register.get());
       }
     }
   }
