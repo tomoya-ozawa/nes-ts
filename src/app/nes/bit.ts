@@ -16,21 +16,21 @@ abstract class Bit {
   }
 
   // TODO: キャリーとoverflowの判定処理
-  public add(value: number | Bit): Bit {
+  public add(value: number | Bit): this {
     const numValue = Bit.isBit(value) ? value.toNumber() : value;
-    return this.clone((this.value + numValue) & this.bitMask);
+    return this.createInstance((this.value + numValue) & this.bitMask);
   }
 
-  public inc(): Bit {
+  public inc(): this {
     return this.add(1);
   }
 
-  public subtract(value: number | Bit): Bit {
+  public subtract(value: number | Bit): this {
     const numValue = Bit.isBit(value) ? value.toNumber() : value;
-    return this.clone((this.value - numValue) & this.bitMask);
+    return this.createInstance((this.value - numValue) & this.bitMask);
   }
 
-  public dec(): Bit {
+  public dec(): this {
     return this.subtract(1);
   }
 
@@ -48,8 +48,9 @@ abstract class Bit {
     }
   }
 
-  private clone(value: number) {
-    const ctor = this.constructor as any;
+  private createInstance(value: number): this {
+    const ctor: new (value: number) => this =
+      Object.getPrototypeOf(this).constructor;
     return new ctor(value);
   }
 }
