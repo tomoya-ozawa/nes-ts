@@ -57,7 +57,6 @@ export default class CPU {
 
   public execute() {
     const opcode = this.fetch().toNumber();
-    console.log(opcode);
 
     switch (opcode) {
       case 0x00:
@@ -606,8 +605,9 @@ export default class CPU {
 
   // TODO: スタックへのpush
   private jsr(opcode: number, addressingMode: "relative" | "absolute") {
-    const address = this.getOperand(addressingMode);
-    this.registers.pc = address;
+    throw new Error("unimplemented instruction" + opcode.toString(16));
+    // const address = this.getOperand(addressingMode);
+    // this.registers.pc = address;
   }
 
   private and(
@@ -947,15 +947,21 @@ export default class CPU {
   }
 
   private inx(opcode: number, addressingMode: "implied") {
-    this.registers.x = this.registers.x.inc();
+    const value = this.registers.x.inc();
+    this.registers.x = value;
+    this.updateStatus(value, ["n", "z"]);
   }
 
   private iny(opcode: number, addressingMode: "implied") {
-    this.registers.y = this.registers.y.inc();
+    const value = this.registers.y.inc();
+    this.registers.x = value;
+    this.updateStatus(value, ["n", "z"]);
   }
 
   private dey(opcode: number, addressingMode: "implied") {
-    this.registers.y = this.registers.y.dec();
+    const value = this.registers.y.dec();
+    this.registers.x = value;
+    this.updateStatus(value, ["n", "z"]);
   }
 
   private bne(opcode: number, addressingMode: "relative") {
@@ -1074,16 +1080,13 @@ export default class CPU {
         return Bit16.fromBytes(lower, upper);
       }
       case "absolute": {
-        const bit16 = Bit16.fromBytes(this.fetch(), this.fetch());
-        return bit16;
+        return Bit16.fromBytes(this.fetch(), this.fetch());
       }
       case "absoluteX":
       case "absoluteY": {
         const register =
           mode === "absoluteX" ? this.registers.x : this.registers.y;
-        const bit16 = Bit16.fromBytes(this.fetch(), this.fetch());
-        bit16.add(register);
-        return bit16;
+        return Bit16.fromBytes(this.fetch(), this.fetch()).add(register);
       }
     }
   }
