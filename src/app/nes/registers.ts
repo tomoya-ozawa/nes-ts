@@ -7,8 +7,8 @@ export class Bit8Register {
     return this.value;
   }
 
-  set(value: Bit8): void {
-    this.value = value;
+  set(value: Bit8 | Bit16): void {
+    this.value = new Bit8(value.toNumber());
   }
 }
 
@@ -19,7 +19,7 @@ export class Bit16Register {
     return this.value;
   }
 
-  set(value: Bit16): void {
-    this.value = value;
+  set(value: Bit8 | Bit16): void {
+    this.value = new Bit16(value.toNumber());
   }
 }
