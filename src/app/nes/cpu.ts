@@ -965,9 +965,10 @@ export default class CPU {
   }
 
   private bne(opcode: number, addressingMode: "relative") {
+    console.log(opcode);
     const relative = this.getOperand(addressingMode).getSignedInt();
     if (this.registers.status.z === 0) {
-      this.registers.pc.add(relative);
+      this.registers.pc = this.registers.pc.add(relative);
     }
   }
 
