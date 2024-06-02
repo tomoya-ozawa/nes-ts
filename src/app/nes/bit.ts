@@ -4,11 +4,13 @@ abstract class Bit {
   }
 
   protected readonly value: number;
-  protected bitMask: number;
+  protected readonly bitMask: number;
+  protected readonly bitSize: number;
 
   constructor(value: number, bitMask: number) {
     this.bitMask = bitMask;
     this.value = value & this.bitMask;
+    this.bitSize = this.calculateBitSize(bitMask);
   }
 
   public toNumber(): number {
@@ -30,6 +32,11 @@ abstract class Bit {
     return this.createInstance((this.value - numValue) & this.bitMask);
   }
 
+  public isMostSignificantBitSet(): boolean {
+    const mostSignificantBit = 1 << (this.bitSize - 1);
+    return (this.value & mostSignificantBit) !== 0;
+  }
+
   public dec(): this {
     return this.subtract(1);
   }
@@ -46,6 +53,15 @@ abstract class Bit {
     } else {
       return this.value;
     }
+  }
+
+  private calculateBitSize(mask: number): number {
+    let size = 0;
+    while (mask > 0) {
+      mask >>= 1;
+      size++;
+    }
+    return size;
   }
 
   private createInstance(value: number): this {

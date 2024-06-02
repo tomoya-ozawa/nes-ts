@@ -973,6 +973,7 @@ export default class CPU {
 
   private updateStatus(value: Bit8, updateFlags: Array<"n" | "z">) {
     if (updateFlags.includes("n")) {
+      this.registers.status.n = value.isMostSignificantBitSet() ? 1 : 0;
     }
     if (updateFlags.includes("z")) {
       this.registers.status.z = value.toNumber() === 0 ? 1 : 0;
