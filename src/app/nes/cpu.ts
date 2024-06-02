@@ -1059,7 +1059,7 @@ export default class CPU {
   ): Bit8 | Bit16 {
     switch (mode) {
       case "accumulator":
-        return this.registers.a;
+        return this.registers.a.get();
       case "relative":
       case "immediate":
       case "zeropage":
