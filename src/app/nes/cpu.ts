@@ -34,7 +34,7 @@ export default class CPU {
     a: new Bit8Register(new Bit8(0)),
     x: new Bit8Register(new Bit8(0)),
     y: new Bit8Register(new Bit8(0)),
-    pc: new Bit16Register(new Bit16(0x10)),
+    pc: new Bit16Register(new Bit16(0x8000 + 0x0010)),
     stackPointer: new Bit8Register(new Bit8(0)),
     status: {
       n: 0,
@@ -49,11 +49,12 @@ export default class CPU {
   };
 
   public constructor(private bus: Bus) {}
+  // TODO: ブートコマンドの実装
 
   public fetch(): Bit8 {
-    const op = this.bus.rom[this.registers.pc.get().toNumber()];
+    const op = this.bus.read(this.registers.pc.get());
     this.registers.pc.set(this.registers.pc.get().inc());
-    return new Bit8(op);
+    return op;
   }
 
   public execute() {
@@ -783,7 +784,7 @@ export default class CPU {
   ) {
     const operand = this.getOperand(addressingMode);
     const value =
-      addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
     this.registers.a.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
@@ -799,7 +800,7 @@ export default class CPU {
   ) {
     const operand = this.getOperand(addressingMode);
     const value =
-      addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
     this.registers.x.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
@@ -815,7 +816,7 @@ export default class CPU {
   ) {
     const operand = this.getOperand(addressingMode);
     const value =
-      addressingMode === "immediate" ? operand : this.bus.ram.get(operand);
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
     this.registers.y.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
@@ -831,21 +832,21 @@ export default class CPU {
       | "indirectY"
       | "zeropageX"
   ) {
-    this.bus.ram.set(this.getOperand(addressingMode), this.registers.a.get());
+    this.bus.write(this.getOperand(addressingMode), this.registers.a.get());
   }
 
   private stx(
     opcode: number,
     addressingMode: "indirectX" | "zeropage" | "absolute" | "zeropageY"
   ) {
-    this.bus.ram.set(this.getOperand(addressingMode), this.registers.x.get());
+    this.bus.write(this.getOperand(addressingMode), this.registers.x.get());
   }
 
   private sty(
     opcode: number,
     addressingMode: "indirectX" | "zeropage" | "absolute" | "zeropageX"
   ) {
-    this.bus.ram.set(this.getOperand(addressingMode), this.registers.y.get());
+    this.bus.write(this.getOperand(addressingMode), this.registers.y.get());
   }
 
   private bcc(opcode: number, addressingMode: "relative") {
@@ -1009,7 +1010,7 @@ export default class CPU {
   //       this.registers.y = new Bit8(this.getValue(addressingMode));
   //       break;
   //     case mnemonics.includes("STA"):
-  //       this.bus.ram.set(this.getValue(addressingMode), this.registers.a);
+  //       this.bus.write(this.getValue(addressingMode), this.registers.a);
   //       break;
   //     case mnemonics.includes("INX"): {
   //       this.registers.x.inc();
@@ -1017,9 +1018,9 @@ export default class CPU {
   //     }
   //     case mnemonics.includes("ISC"): {
   //       const address = this.getValue(addressingMode);
-  //       const value = this.bus.ram.get(address);
+  //       const value = this.bus.read(address);
   //       value.add(1);
-  //       this.bus.ram.set(address, value);
+  //       this.bus.write(address, value);
   //       break;
   //     }
   //     case mnemonics.includes("DEY"): {
@@ -1078,8 +1079,8 @@ export default class CPU {
       }
       case "indirect": {
         const address = Bit16.fromBytes(this.fetch(), this.fetch());
-        const lower = this.bus.ram.get(address);
-        const upper = this.bus.ram.get(address.add(1));
+        const lower = this.bus.read(address);
+        const upper = this.bus.read(address.add(1));
         return Bit16.fromBytes(lower, upper);
       }
       case "absolute": {
