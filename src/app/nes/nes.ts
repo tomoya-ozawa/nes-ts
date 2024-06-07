@@ -1,5 +1,6 @@
 import { Bit16, Bit8 } from "./bit";
 import CPU from "./cpu";
+import PPU from "./ppu";
 import RAM from "./ram";
 
 export type Bus = {
@@ -12,10 +13,12 @@ const NES_HEADER_SIZE = 0x10;
 export default class NES {
   private cpu: CPU;
   private ram: RAM;
+  private ppu: PPU;
 
   public constructor(private rom: Uint8Array) {
     this.ram = new RAM();
     this.cpu = new CPU(this.bus());
+    this.ppu = new PPU();
 
     const pgRomSize = 0x4000 * rom[4];
     const chRomSize = 0x2000 * rom[5];
@@ -118,7 +121,7 @@ export default class NES {
       return;
     }
 
-    // $1800–$1FFF	$0800 Mirrors of $0000–$07FF
+    // $1800–$1FFF	$0800 Mirrors of $0000–$07FFs
     if (addressValue >= 0x1800 && addressValue <= 0x1fff) {
       this.ram.set(address.subtract(0x1800), data);
       return;
@@ -128,8 +131,8 @@ export default class NES {
     // $2008–$3FFF	$1FF8	Mirrors of $2000–$2007 (repeats every 8 bytes)
     if (addressValue >= 0x2000 && addressValue <= 0x3fff) {
       const mod = addressValue % 8;
-      // this.ppu.set(0x2000 + mod, data);
-      throw new Error("implement ppu!");
+      this.ppu.write(new Bit16(0x2000 + mod), data);
+      return;
     }
 
     // $4000–$4017	$0018	NES APU and I/O registers

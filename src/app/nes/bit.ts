@@ -37,6 +37,11 @@ export abstract class Bit {
     return (this.value & mostSignificantBit) !== 0;
   }
 
+  public getNthBit(position: number): 1 | 0 {
+    const value = (this.value >> position) & 1;
+    return value as 1 | 0;
+  }
+
   public dec(): this {
     return this.subtract(1);
   }
