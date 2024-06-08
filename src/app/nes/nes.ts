@@ -14,6 +14,8 @@ export default class NES {
   private cpu: CPU;
   private ram: RAM;
   private ppu: PPU;
+  private pgrom: Uint8Array;
+  private chrom: Uint8Array;
 
   public constructor(private rom: Uint8Array) {
     this.ram = new RAM();
@@ -27,8 +29,8 @@ export default class NES {
     const chRomStartAddress = pgRomEndAddress + 1;
     const chRomEndAddress = chRomStartAddress + chRomSize;
 
-    const pgrom = rom.slice(pgRomStartAddress, pgRomEndAddress);
-    const chrom = rom.slice(chRomStartAddress, chRomEndAddress);
+    this.pgrom = rom.slice(pgRomStartAddress, pgRomEndAddress);
+    this.chrom = rom.slice(chRomStartAddress, chRomEndAddress);
   }
 
   public start() {
@@ -92,7 +94,7 @@ export default class NES {
     // $6000–$7FFF $2000 Usually cartridge RAM, when present.
     // $8000–$FFFF $8000 Usually cartridge ROM and mapper registers.
     if (addressValue >= 0x8000 && addressValue <= 0xffff) {
-      return new Bit8(this.rom[address.subtract(0x8000).toNumber()]);
+      return new Bit8(this.pgrom[address.subtract(0x8000).toNumber()]);
     }
 
     throw new Error(

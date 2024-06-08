@@ -34,7 +34,7 @@ export default class CPU {
     a: new Bit8Register(new Bit8(0)),
     x: new Bit8Register(new Bit8(0)),
     y: new Bit8Register(new Bit8(0)),
-    pc: new Bit16Register(new Bit16(0x8000 + 0x0010)),
+    pc: new Bit16Register(new Bit16(0x8000)),
     stackPointer: new Bit8Register(new Bit8(0)),
     status: {
       n: 0,
