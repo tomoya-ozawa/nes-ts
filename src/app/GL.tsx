@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
-  children: (renderFunc: () => void) => React.ReactNode;
+  children: (renderFunc: (pixelData: Uint8Array) => void) => React.ReactNode;
 };
 
 export default function GL({ children }: Props) {
@@ -99,24 +99,11 @@ export default function GL({ children }: Props) {
     setgl(gl);
   }, []);
 
-  const render = () => {
+  const render = (pixelData: Uint8Array) => {
     if (!gl) return;
-
-    const pixelData = new Uint8Array(256 * 240 * 4); // 256x240 ピクセル、各ピクセル4チャネル (RGBA)
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-
-    // ここに各ピクセルの色データを設定します
-    for (let y = 0; y < 240; y++) {
-      for (let x = 0; x < 256; x++) {
-        const offset = (y * 256 + x) * 4;
-        pixelData[offset] = (x % 256) * Math.random(); // 赤
-        pixelData[offset + 1] = y % 256; // 緑
-        pixelData[offset + 2] = 0; // 青
-        pixelData[offset + 3] = 255; // アルファ
-      }
-    }
 
     gl.texImage2D(
       gl.TEXTURE_2D,

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import nes from "./nes";
 
 type Props = {
-  render: () => void;
+  render: (pixelData: Uint8Array) => void;
 };
 
 const NESComponent = ({ render }: Props) => {
@@ -15,12 +15,8 @@ const NESComponent = ({ render }: Props) => {
       .then((response) => response.arrayBuffer())
       .then((arraybuffer) => {
         const rom = new Uint8Array(arraybuffer);
-        nes(rom);
+        nes(rom, render);
       });
-
-    setInterval(() => {
-      render();
-    }, 60 / 1000);
 
     setData("start");
   }, []);
