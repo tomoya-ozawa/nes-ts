@@ -16,6 +16,7 @@ export default class NES {
   private ppu: PPU;
   private pgrom: Uint8Array;
   private chrom: Uint8Array;
+  private onChangeHandler: (nes: this) => void = () => {};
 
   public constructor(private rom: Uint8Array) {
     this.ram = new RAM();
@@ -37,12 +38,21 @@ export default class NES {
     const id = setInterval(() => {
       try {
         this.cpu.execute();
+        this.emitChange();
       } catch (e) {
         clearInterval(id);
         console.error(e);
         console.log(this);
       }
     }, 0);
+  }
+
+  public onChange(handler: (nes: this) => void) {
+    this.onChangeHandler = handler;
+  }
+
+  private emitChange() {
+    this.onChangeHandler(this);
   }
 
   private bus(): Bus {
