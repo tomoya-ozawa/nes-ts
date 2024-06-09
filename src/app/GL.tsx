@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-const GL = () => {
+type Props = {
+  children: (renderFunc: () => void) => React.ReactNode;
+};
+
+export default function GL({ children }: Props) {
   const canvasRef = useRef<any>(null);
-  const gl = useState<any>(null);
+  const [gl, setgl] = useState<any>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -92,50 +96,52 @@ const GL = () => {
     gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
     gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
 
+    setgl(gl);
+  }, []);
+
+  const render = () => {
+    if (!gl) return;
+
     const pixelData = new Uint8Array(256 * 240 * 4); // 256x240 ピクセル、各ピクセル4チャネル (RGBA)
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
-    const render = () => {
-      // ここに各ピクセルの色データを設定します
-      for (let y = 0; y < 240; y++) {
-        for (let x = 0; x < 256; x++) {
-          const offset = (y * 256 + x) * 4;
-          pixelData[offset] = (x % 256) * Math.random(); // 赤
-          pixelData[offset + 1] = y % 256; // 緑
-          pixelData[offset + 2] = 0; // 青
-          pixelData[offset + 3] = 255; // アルファ
-        }
+    // ここに各ピクセルの色データを設定します
+    for (let y = 0; y < 240; y++) {
+      for (let x = 0; x < 256; x++) {
+        const offset = (y * 256 + x) * 4;
+        pixelData[offset] = (x % 256) * Math.random(); // 赤
+        pixelData[offset + 1] = y % 256; // 緑
+        pixelData[offset + 2] = 0; // 青
+        pixelData[offset + 3] = 255; // アルファ
       }
+    }
 
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        256,
-        240,
-        0,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        pixelData
-      );
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      256,
+      240,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      pixelData
+    );
 
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    };
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  };
 
-    setInterval(() => {
-      render();
-    }, 60 / 1000);
-  }, []);
-
-  return <canvas ref={canvasRef} width="256" height="240"></canvas>;
-};
-
-export default GL;
+  return (
+    <canvas ref={canvasRef} width="256" height="240">
+      {gl ? children(render) : null}
+    </canvas>
+  );
+}

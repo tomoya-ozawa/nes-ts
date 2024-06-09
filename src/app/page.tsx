@@ -2,21 +2,20 @@
 
 import React, { useState, useEffect } from "react";
 import styles from "./page.module.css";
-import nes from "./nes";
+import NESComponent from "./NESComponent";
+import GL from "./GL";
 
+// TODO: 微妙にGLとNESComponentがわかりづらいので修正する
+// 例えば、
+// useGLの中でWebGLに関する処理を行い、render(Uint8Array)関数と、GLComponentを外出しする
+// const [GLComponent, renderGL] = useGL();
+// useNESの中でromのfetchでnes.startを行う。その際に、nes.onChange((ppu) => {render(ppu)})するとか
+// const [] = useNES(renderGL);
+//return (<div><GLComponent/></div>)
 export default function Home() {
-  const [data, setData] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/sample1.nes")
-      .then((response) => response.arrayBuffer())
-      .then((arraybuffer) => {
-        const rom = new Uint8Array(arraybuffer);
-        nes(rom);
-      });
-
-    setData("start");
-  }, []);
-
-  return <p>{data ? `Your data: ${data}` : "Loading..."}</p>;
+  return (
+    <div>
+      <GL>{(render) => <NESComponent render={render} />}</GL>
+    </div>
+  );
 }
