@@ -83,31 +83,44 @@ export default class PPU {
 
   constructor(private chrom: Uint8Array) {}
 
+  // TODO: 属性テーブルやpaletteを反映させる
   public render() {
-    // スプライトデータをUnit8Arrayに格納
-    const sprites = new Uint8Array(256 * 240 * 4); // 256x240 ピクセル、各ピクセル4チャネル (RGBA)
+    const display = new Uint8Array(256 * 240 * 4); // 256x240 ピクセル、各ピクセル4チャネル (RGBA)
 
-    const sliced = this.chrom.slice(800, 1200);
+    for (let nameIndex = 0x2000; nameIndex < 0x23bf; nameIndex++) {
+      const target = this.vram.get(nameIndex).toNumber();
+      if (target === 0) {
+        continue;
+      }
 
-    for (let tileIndex = 0; tileIndex < sliced.length / 16; tileIndex++) {
+      // 描画するx,yのUint8Arrayの開始位置を割り出す
+      const nameI = nameIndex - 0x2000;
+      const column = Math.floor(nameI / 32);
+      const yOffset = column * 256 * 8;
+      const xOffset = (nameI % 32) * 8;
+      const arrayIndexOffset = (yOffset + xOffset) * 4;
+
+      // スプライトの描画
       for (let i = 0; i < 8; i++) {
-        const byte1 = sliced[tileIndex * 16 + i];
-        const byte2 = sliced[tileIndex * 16 + i + 8];
+        const byte1 = this.chrom[target * 16 + i];
+        const byte2 = this.chrom[target * 16 + i + 8];
 
-        for (let col = 0; col < 8; col++) {
-          const bit1 = (byte1 >> (7 - col)) & 1;
-          const bit2 = (byte2 >> (7 - col)) & 1;
-          const color = (bit1 + (bit2 << 1)) * 85; // グレースケールの色値
-          const offset = tileIndex * 4 * 8 + (i * 256 + col) * 4;
-          sprites[offset] = color;
-          sprites[offset + 1] = color;
-          sprites[offset + 2] = color;
-          sprites[offset + 3] = 1;
+        for (let bit = 0; bit < 8; bit++) {
+          const bit1 = (byte1 >> (7 - bit)) & 1;
+          const bit2 = (byte2 >> (7 - bit)) & 1;
+          // グレースケールの色値
+          const color = (bit1 + (bit2 << 1)) * 85;
+          // 描画するx,yの位置 + iバイトごとに行(256)分加算
+          const offset = arrayIndexOffset + (i * 256 + bit) * 4;
+          display[offset] = color;
+          display[offset + 1] = color;
+          display[offset + 2] = color;
+          display[offset + 3] = 1;
         }
       }
     }
 
-    return sprites;
+    return display;
   }
 
   private numberToBitArray(num: number, bitLength = 8) {
