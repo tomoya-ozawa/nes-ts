@@ -123,14 +123,6 @@ export default class PPU {
     return display;
   }
 
-  private numberToBitArray(num: number, bitLength = 8) {
-    const bitArray = [];
-    for (let i = bitLength - 1; i >= 0; i--) {
-      bitArray.push((num >> i) & 1);
-    }
-    return bitArray;
-  }
-
   public read(cpuAddress: Bit16) {
     switch (cpuAddress.toNumber()) {
       case 0x2002:
