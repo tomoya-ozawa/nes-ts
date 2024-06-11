@@ -16,6 +16,7 @@ export default function GL({ children }: Props) {
     }
 
     const gl = canvas.getContext("webgl");
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
     if (!gl) {
       console.error("WebGL not supported");

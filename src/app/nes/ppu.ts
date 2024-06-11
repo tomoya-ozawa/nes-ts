@@ -81,6 +81,43 @@ export default class PPU {
     w: 0,
   };
 
+  constructor(private chrom: Uint8Array) {}
+
+  public render() {
+    // スプライトデータをUnit8Arrayに格納
+    const sprites = new Uint8Array(256 * 240 * 4); // 256x240 ピクセル、各ピクセル4チャネル (RGBA)
+
+    const sliced = this.chrom.slice(800, 1200);
+
+    for (let tileIndex = 0; tileIndex < sliced.length / 16; tileIndex++) {
+      for (let i = 0; i < 8; i++) {
+        const byte1 = sliced[tileIndex * 16 + i];
+        const byte2 = sliced[tileIndex * 16 + i + 8];
+
+        for (let col = 0; col < 8; col++) {
+          const bit1 = (byte1 >> (7 - col)) & 1;
+          const bit2 = (byte2 >> (7 - col)) & 1;
+          const color = (bit1 + (bit2 << 1)) * 85; // グレースケールの色値
+          const offset = tileIndex * 4 * 8 + (i * 256 + col) * 4;
+          sprites[offset] = color;
+          sprites[offset + 1] = color;
+          sprites[offset + 2] = color;
+          sprites[offset + 3] = 1;
+        }
+      }
+    }
+
+    return sprites;
+  }
+
+  private numberToBitArray(num: number, bitLength = 8) {
+    const bitArray = [];
+    for (let i = bitLength - 1; i >= 0; i--) {
+      bitArray.push((num >> i) & 1);
+    }
+    return bitArray;
+  }
+
   public read(cpuAddress: Bit16) {
     switch (cpuAddress.toNumber()) {
       case 0x2002:

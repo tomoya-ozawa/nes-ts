@@ -1,5 +1,5 @@
 import { Bit8, Bit16 } from "./bit";
-import { Bus } from "./nes";
+import { CpuBus } from "./nes";
 import OPCODES, { Opcode } from "./opcodes";
 import { Bit16Register, Bit8Register } from "./registers";
 
@@ -48,7 +48,7 @@ export default class CPU {
     },
   };
 
-  public constructor(private bus: Bus) {}
+  public constructor(private bus: CpuBus) {}
   // TODO: ブートコマンドの実装
 
   public fetch(): Bit8 {

@@ -3,7 +3,7 @@ import CPU from "./cpu";
 import PPU from "./ppu";
 import RAM from "./ram";
 
-export type Bus = {
+export type CpuBus = {
   read: (address: Bit8 | Bit16) => Bit8;
   write: (address: Bit8 | Bit16, data: Bit8) => void;
 };
@@ -11,6 +11,7 @@ export type Bus = {
 const NES_HEADER_SIZE = 0x10;
 
 export default class NES {
+  public display: Uint8Array = new Uint8Array();
   private cpu: CPU;
   private ram: RAM;
   private ppu: PPU;
@@ -20,8 +21,7 @@ export default class NES {
 
   public constructor(private rom: Uint8Array) {
     this.ram = new RAM();
-    this.cpu = new CPU(this.bus());
-    this.ppu = new PPU();
+    this.cpu = new CPU(this.cpuBus());
 
     const pgRomSize = 0x4000 * rom[4];
     const chRomSize = 0x2000 * rom[5];
@@ -32,19 +32,31 @@ export default class NES {
 
     this.pgrom = rom.slice(pgRomStartAddress, pgRomEndAddress);
     this.chrom = rom.slice(chRomStartAddress, chRomEndAddress);
+
+    this.ppu = new PPU(this.chrom);
   }
 
   public start() {
-    const id = setInterval(() => {
+    const cpuId = setInterval(() => {
       try {
         this.cpu.execute();
         this.emitChange();
       } catch (e) {
-        clearInterval(id);
+        clearInterval(cpuId);
         console.error(e);
         console.log(this);
       }
     }, 0);
+
+    const ppuId = setInterval(() => {
+      try {
+        this.display = this.ppu.render();
+      } catch (e) {
+        clearInterval(ppuId);
+        console.error(e);
+        console.log(this);
+      }
+    }, 60 / 1000);
   }
 
   public onChange(handler: (nes: this) => void) {
@@ -55,7 +67,7 @@ export default class NES {
     this.onChangeHandler(this);
   }
 
-  private bus(): Bus {
+  private cpuBus(): CpuBus {
     return {
       read: this.readByCPU.bind(this),
       write: this.writeByCPU.bind(this),
