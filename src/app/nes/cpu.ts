@@ -49,7 +49,14 @@ export default class CPU {
   };
 
   public constructor(private bus: CpuBus) {}
-  // TODO: ブートコマンドの実装
+
+  public init() {
+    const lower = this.bus.read(new Bit16(0xfffc));
+    const upper = this.bus.read(new Bit16(0xfffd));
+    const counter = Bit16.fromBytes(lower, upper);
+    console.log(counter);
+    this.registers.pc.set(counter);
+  }
 
   public fetch(): Bit8 {
     const op = this.bus.read(this.registers.pc.get());

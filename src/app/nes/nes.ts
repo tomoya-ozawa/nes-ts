@@ -37,6 +37,7 @@ export default class NES {
   }
 
   public start() {
+    this.cpu.init();
     const cpuId = setInterval(() => {
       try {
         this.cpu.execute();
@@ -102,7 +103,7 @@ export default class NES {
     if (addressValue >= 0x2000 && addressValue <= 0x3fff) {
       const mod = addressValue % 8;
       // this.ppu.get(0x2000 + mod);
-      throw new Error("implement ppu!");
+      throw new Error("implement ppu!" + addressValue);
     }
 
     // $4000–$4017	$0018	NES APU and I/O registers
