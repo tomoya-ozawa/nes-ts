@@ -1,5 +1,6 @@
 import { Bit16, Bit8 } from "./bit";
 import CPU from "./cpu";
+import { Mapper, getMappers } from "./mappers";
 import PPU from "./ppu";
 import RAM from "./ram";
 
@@ -15,7 +16,7 @@ export default class NES {
   private cpu: CPU;
   private ram: RAM;
   private ppu: PPU;
-  private pgrom: Uint8Array;
+  private mapper: Mapper;
   private chrom: Uint8Array;
   private onChangeHandler: (nes: this) => void = () => {};
 
@@ -30,9 +31,12 @@ export default class NES {
     const chRomStartAddress = pgRomEndAddress + 1;
     const chRomEndAddress = chRomStartAddress + chRomSize;
 
-    this.pgrom = rom.slice(pgRomStartAddress, pgRomEndAddress);
+    const Mapper = getMappers(pgRomSize);
+    this.mapper = new Mapper(
+      rom.slice(pgRomStartAddress, pgRomEndAddress),
+      pgRomSize
+    );
     this.chrom = rom.slice(chRomStartAddress, chRomEndAddress);
-
     this.ppu = new PPU(this.chrom);
   }
 
@@ -117,7 +121,7 @@ export default class NES {
     // $6000–$7FFF $2000 Usually cartridge RAM, when present.
     // $8000–$FFFF $8000 Usually cartridge ROM and mapper registers.
     if (addressValue >= 0x8000 && addressValue <= 0xffff) {
-      return new Bit8(this.pgrom[address.subtract(0x8000).toNumber()]);
+      return this.mapper.read(address);
     }
 
     throw new Error(

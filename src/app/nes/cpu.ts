@@ -54,7 +54,6 @@ export default class CPU {
     const lower = this.bus.read(new Bit16(0xfffc));
     const upper = this.bus.read(new Bit16(0xfffd));
     const counter = Bit16.fromBytes(lower, upper);
-    console.log(counter);
     this.registers.pc.set(counter);
   }
 
