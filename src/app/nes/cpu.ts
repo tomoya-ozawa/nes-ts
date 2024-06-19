@@ -35,7 +35,8 @@ export default class CPU {
     x: new Bit8Register(new Bit8(0)),
     y: new Bit8Register(new Bit8(0)),
     pc: new Bit16Register(new Bit16(0x8000)),
-    stackPointer: new Bit8Register(new Bit8(0)),
+    // TODO: StackPointerのデフォルト値が0xffで正しいのか未確認
+    stackPointer: new Bit8Register(new Bit8(0xff)),
     status: {
       n: 0,
       v: 0,
@@ -64,9 +65,15 @@ export default class CPU {
   }
 
   public execute() {
-    const opcode = this.fetch().toNumber();
+    const opcode = this.fetch();
 
-    switch (opcode) {
+    console.log(
+      this.registers.pc.get().toHexString(),
+      opcode.toHexString(),
+      OPCODES[opcode.toNumber()].mnemonics
+    );
+
+    switch (opcode.toNumber()) {
       case 0x00:
         return this.brk(0x0, "implied");
       case 0x01:
@@ -557,7 +564,7 @@ export default class CPU {
         return this.illegal(0xff);
       default:
         throw new Error(
-          `invalid opcode! ${opcode.toString(16)} , ${this.registers.pc
+          `invalid opcode! ${opcode.toHexString()} , ${this.registers.pc
             .get()
             .toHexString()}`
         );
@@ -604,18 +611,22 @@ export default class CPU {
   }
 
   private bpl(opcode: number, addressingMode: "relative") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    if (this.registers.status.n === 0) {
+      this.registers.pc.set(operand);
+    }
   }
 
   private clc(opcode: number, addressingMode: "implied") {
     throw new Error("unimplemented instruction" + opcode.toString(16));
   }
 
-  // TODO: スタックへのpush
   private jsr(opcode: number, addressingMode: "relative" | "absolute") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
-    // const address = this.getOperand(addressingMode);
-    // this.registers.pc = address;
+    const address = this.getOperand(addressingMode);
+    const stackAddress = this.registers.stackPointer.get().add(0x0100);
+    this.bus.write(stackAddress, this.registers.pc.get());
+    this.registers.stackPointer.set(this.registers.stackPointer.get().dec());
+    this.registers.pc.set(address);
   }
 
   private and(
@@ -917,7 +928,7 @@ export default class CPU {
   }
 
   private cld(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.status.d = 1;
   }
 
   private nop(opcode: number, addressingMode: "implied") {
@@ -974,9 +985,9 @@ export default class CPU {
   }
 
   private bne(opcode: number, addressingMode: "relative") {
-    const relative = this.getOperand(addressingMode).getSignedInt();
+    const operand = this.getOperand(addressingMode);
     if (this.registers.status.z === 0) {
-      this.registers.pc.set(this.registers.pc.get().add(relative));
+      this.registers.pc.set(operand);
     }
   }
 
@@ -988,71 +999,6 @@ export default class CPU {
       this.registers.status.z = value.toNumber() === 0 ? 1 : 0;
     }
   }
-
-  // public execute() {
-  //   const opcode = this.fetch().toNumber();
-  //   const { mnemonics, addressingMode } = OPCODES[opcode];
-
-  //   switch (true) {
-  //     case mnemonics.includes("INS"):
-  //       this.registers.status.i = 1;
-  //       break;
-  //     case mnemonics.includes("SEI"):
-  //       this.registers.status.i = 1;
-  //       break;
-  //     case mnemonics.includes("BRK"):
-  //       this.registers.status.b = 1;
-  //       break;
-  //     case mnemonics.includes("TXS"):
-  //       this.registers.stackPointer = this.registers.x;
-  //       break;
-  //     case mnemonics.includes("LDA"):
-  //       this.registers.a = new Bit8(this.getValue(addressingMode));
-  //       break;
-  //     case mnemonics.includes("LDX"):
-  //       this.registers.x = new Bit8(this.getValue(addressingMode));
-  //       break;
-  //     case mnemonics.includes("LDY"):
-  //       this.registers.y = new Bit8(this.getValue(addressingMode));
-  //       break;
-  //     case mnemonics.includes("STA"):
-  //       this.bus.write(this.getValue(addressingMode), this.registers.a);
-  //       break;
-  //     case mnemonics.includes("INX"): {
-  //       this.registers.x.inc();
-  //       break;
-  //     }
-  //     case mnemonics.includes("ISC"): {
-  //       const address = this.getValue(addressingMode);
-  //       const value = this.bus.read(address);
-  //       value.add(1);
-  //       this.bus.write(address, value);
-  //       break;
-  //     }
-  //     case mnemonics.includes("DEY"): {
-  //       this.registers.y.dec();
-  //       break;
-  //     }
-  //     case mnemonics.includes("BNE"): {
-  //       const relative = new Bit8(this.getValue(addressingMode)).getSignedInt();
-  //       if (this.registers.status.z === 0) {
-  //         this.registers.pc.add(relative);
-  //       }
-  //       break;
-  //     }
-  //     case mnemonics.includes("JSR"): {
-  //       const address = this.getValue(addressingMode);
-  //       this.registers.pc = new Bit16(address);
-  //       break;
-  //     }
-  //     default:
-  //       throw new Error(
-  //         `invalid opcode! ${opcode.toString(
-  //           16
-  //         )} , ${this.registers.pc.toHexString()}`
-  //       );
-  //   }
-  // }
 
   // d,x	Zero page indexed	val = PEEK((arg + X) % 256)	4
   // d,y	Zero page indexed	val = PEEK((arg + Y) % 256)	4
@@ -1068,15 +1014,14 @@ export default class CPU {
       case "accumulator":
         return this.registers.a.get();
       case "relative":
+        return this.registers.pc.get().add(this.fetch().getSignedInt());
       case "immediate":
       case "zeropage":
         return this.fetch();
       case "zeropageX":
-      case "zeropageY": {
-        const register =
-          mode === "zeropageX" ? this.registers.x : this.registers.y;
-        return this.fetch().add(register.get());
-      }
+        return this.fetch().add(this.registers.x.get());
+      case "zeropageY":
+        return this.fetch().add(this.registers.y.get());
       //アドレス「アドレス「IM8 + X」の16bit値」の8bit値
       case "indirectX":
       // アドレス「アドレス「IM8」の16bit値 + Y」の8bit値を

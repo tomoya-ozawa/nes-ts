@@ -1,4 +1,4 @@
-[
+const nesfiles = [
   "nesrom/nes-test-roms/240pee/240pee-bnrom.nes",
   "nesrom/nes-test-roms/240pee/240pee.nes",
   "nesrom/nes-test-roms/MMC1_A12/mmc1_a12.nes",
@@ -265,3 +265,5 @@
   "nesrom/tkshoot/SHOOT.nes",
   "sample1.nes",
 ];
+
+export default nesfiles;

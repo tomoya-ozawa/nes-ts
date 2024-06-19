@@ -123,14 +123,13 @@ export default class PPU {
     return display;
   }
 
-  public read(cpuAddress: Bit16) {
+  public read(cpuAddress: Bit16): Bit8 {
     switch (cpuAddress.toNumber()) {
       case 0x2002:
-        this.getPPUSTATUS();
-        break;
+        return this.getPPUSTATUS();
       case 0x2007:
-        this.getPPUDATA();
-        break;
+        throw new Error("IMPLEMENT 0x2007");
+      // return this.getPPUDATA();
       default:
         throw new Error(`invalid address!! ${cpuAddress.toHexString()}`);
     }
@@ -255,7 +254,8 @@ export default class PPU {
   }
 
   private getPPUDATA() {
-    throw new Error("implement this!");
+    throw new Error("implement this!!");
+    // this.registers.w = 0;
     // const data = this.vram.get(this.registers.ppuaddr.get());
     // this.incrementPPUADDR();
     // return data;
