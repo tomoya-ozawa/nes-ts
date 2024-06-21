@@ -85,6 +85,10 @@ export default class PPU {
 
   // TODO: 属性テーブルやpaletteを反映させる
   public render() {
+    // vblankを描画
+    // 256x20 ピクセル、各ピクセル4チャネル (RGBA)
+    this.setPPUSTATUS(true, false, false, false);
+
     // 256x240 ピクセル、各ピクセル4チャネル (RGBA)
     const display = new Uint8Array(256 * 240 * 4);
     let displayIndex = 0;
@@ -115,6 +119,23 @@ export default class PPU {
         }
       }
     }
+
+    // const vblank = new Uint8Array(256 * 20 * 4);
+    // let vblankIndex = 0;
+
+    // for (let y = 0; y < 2000; y++) {
+    //   for (let x = 0; x < 255; x++) {
+    //     vblankIndex = vblankIndex + 4;
+    //     vblank[vblankIndex] = 0;
+    //     vblank[vblankIndex + 1] = 0;
+    //     vblank[vblankIndex + 2] = 0;
+    //     vblank[vblankIndex + 3] = 1;
+    //   }
+    // }
+
+    setTimeout(() => {
+      this.setPPUSTATUS(false, false, false, false);
+    }, 250);
 
     return display;
   }
@@ -240,7 +261,6 @@ export default class PPU {
     status = (status << 1) | Number(unwritableVRAM);
     // 3-0 未使用
     status = status << 4;
-
     this.registers.ppustatus.set(new Bit8(status));
   }
 

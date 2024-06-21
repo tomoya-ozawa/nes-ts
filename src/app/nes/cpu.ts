@@ -67,11 +67,12 @@ export default class CPU {
   public execute() {
     const opcode = this.fetch();
 
-    console.log(
-      this.registers.pc.get().toHexString(),
-      opcode.toHexString(),
-      OPCODES[opcode.toNumber()].mnemonics
-    );
+    // console.log(
+    //   this.registers.pc.get().toHexString(),
+    //   opcode.toHexString(),
+    //   OPCODES[opcode.toNumber()].mnemonics,
+    //   this.bus.read(new Bit16(0x2002)).toNumber()
+    // );
 
     switch (opcode.toNumber()) {
       case 0x00:
@@ -623,9 +624,23 @@ export default class CPU {
 
   private jsr(opcode: number, addressingMode: "relative" | "absolute") {
     const address = this.getOperand(addressingMode);
-    const stackAddress = this.registers.stackPointer.get().add(0x0100);
-    this.bus.write(stackAddress, this.registers.pc.get());
-    this.registers.stackPointer.set(this.registers.stackPointer.get().dec());
+
+    // 次の命令のアドレス - 1の2byte分をstackにpushする
+    const returnAddressUpper = new Bit8(
+      this.registers.pc.get().toNumber() >> 8
+    );
+    const returnAddressLower = new Bit8(
+      this.registers.pc.get().toNumber() & 0xff
+    );
+    const stackAddress = new Bit16(
+      this.registers.stackPointer.get().toNumber()
+    ).add(0x0100);
+    this.bus.write(stackAddress, returnAddressUpper);
+    this.bus.write(stackAddress.dec(), returnAddressLower);
+    this.registers.stackPointer.set(
+      this.registers.stackPointer.get().dec().dec()
+    );
+
     this.registers.pc.set(address);
   }
 
@@ -717,7 +732,22 @@ export default class CPU {
   }
 
   private rts(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    // 戻りアドレスを pop し、そのアドレスに 1 を加えたアドレスへジャンプ
+    // 次の命令のアドレス - 1の2byte分をstackにpushする
+    this.registers.stackPointer.set(this.registers.stackPointer.get().inc());
+    const stackAddress = new Bit16(
+      this.registers.stackPointer.get().toNumber()
+    ).add(0x0100);
+
+    const returnAddressLower = this.bus.read(stackAddress);
+    const returnAddressUpper = this.bus.read(stackAddress.inc());
+    const returnAddress = Bit16.fromBytes(
+      returnAddressLower,
+      returnAddressUpper
+    ).inc();
+
+    this.registers.stackPointer.set(this.registers.stackPointer.get().inc());
+    this.registers.pc.set(returnAddress);
   }
 
   private jmp(opcode: number, addressingMode: "absolute" | "indirect") {
@@ -774,7 +804,7 @@ export default class CPU {
   }
 
   private txs(opcode: number, addressingMode: "implied") {
-    this.registers.stackPointer = this.registers.x;
+    this.registers.stackPointer.set(this.registers.x.get());
     this.updateStatus(this.registers.stackPointer.get(), ["n", "z"]);
   }
 
@@ -1011,13 +1041,14 @@ export default class CPU {
     mode: Exclude<Opcode["addressingMode"], "implied">
   ): Bit8 | Bit16 {
     switch (mode) {
-      case "accumulator":
-        return this.registers.a.get();
-      case "relative":
-        return this.registers.pc.get().add(this.fetch().getSignedInt());
       case "immediate":
       case "zeropage":
         return this.fetch();
+      case "accumulator":
+        return this.registers.a.get();
+      case "relative":
+        const operand = this.fetch().getSignedInt();
+        return this.registers.pc.get().add(operand);
       case "zeropageX":
         return this.fetch().add(this.registers.x.get());
       case "zeropageY":
@@ -1038,11 +1069,13 @@ export default class CPU {
         return Bit16.fromBytes(this.fetch(), this.fetch());
       }
       case "absoluteX":
-      case "absoluteY": {
-        const register =
-          mode === "absoluteX" ? this.registers.x : this.registers.y;
-        return Bit16.fromBytes(this.fetch(), this.fetch()).add(register.get());
-      }
+        return Bit16.fromBytes(this.fetch(), this.fetch()).add(
+          this.registers.x.get()
+        );
+      case "absoluteY":
+        return Bit16.fromBytes(this.fetch(), this.fetch()).add(
+          this.registers.y.get()
+        );
     }
   }
 }

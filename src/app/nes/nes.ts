@@ -61,7 +61,7 @@ export default class NES {
         console.error(e);
         console.log(this);
       }
-    }, 60 / 1000);
+    }, 500 / 1000);
   }
 
   public onChange(handler: (nes: this) => void) {

@@ -16,7 +16,7 @@ const NESComponent = ({ render }: Props) => {
       // fetch("/nesrom/tkshoot/SHOOT.nes")
       // fetch("/nesrom/nes-test-roms/branch_timing_tests/1.Branch_Basics.nes")
       // fetch("/nesrom/nes-test-roms/240pee/240pee.nes")
-      //fetch("/sample1.nes")
+      // fetch("/sample1.nes")
       .then((response) => response.arrayBuffer())
       .then((arraybuffer) => {
         const rom = new Uint8Array(arraybuffer);
