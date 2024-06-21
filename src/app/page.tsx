@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import styles from "./page.module.css";
 import NESComponent from "./NESComponent";
 import GL from "./GL";
+import NESROMSelect from "./NESROMSelect";
 
 // TODO: 微妙にGLとNESComponentがわかりづらいので修正する
 // 例えば、
@@ -13,9 +13,20 @@ import GL from "./GL";
 // const [] = useNES(renderGL);
 //return (<div><GLComponent/></div>)
 export default function Home() {
+  const [filePath, setFilePath] = useState<string | undefined>(undefined);
+
+  const handleSelect = (filePath: string) => {
+    setFilePath(filePath);
+  };
+
   return (
     <div>
-      <GL>{(render) => <NESComponent render={render} />}</GL>
+      <GL>
+        {(render) => <NESComponent nesFilePath={filePath} render={render} />}
+      </GL>
+      <div>
+        <NESROMSelect onSelect={handleSelect} />
+      </div>
     </div>
   );
 }
