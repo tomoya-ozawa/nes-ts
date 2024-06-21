@@ -44,8 +44,23 @@ export default class NES {
     this.cpu.init();
     const cpuId = setInterval(() => {
       try {
-        this.cpu.execute();
+        // TODO: 20 / 260 = 0.08 の時間をVBlank中の時間として設定。描画や動作がおかしくなるようであれば修正する
+        let count = 0;
+        while (count < 92) {
+          this.cpu.execute();
+          count++;
+        }
+
+        this.display = this.ppu.render();
         this.emitChange();
+
+        while (count < 100) {
+          this.ppu.setVBlank(true);
+          this.cpu.execute();
+          count++;
+        }
+
+        this.ppu.setVBlank(false);
       } catch (e) {
         clearInterval(cpuId);
         console.error(e);
@@ -53,15 +68,15 @@ export default class NES {
       }
     }, 0);
 
-    const ppuId = setInterval(() => {
-      try {
-        this.display = this.ppu.render();
-      } catch (e) {
-        clearInterval(ppuId);
-        console.error(e);
-        console.log(this);
-      }
-    }, 500 / 1000);
+    // const ppuId = setInterval(() => {
+    //   try {
+    //     this.display = this.ppu.render();
+    //   } catch (e) {
+    //     clearInterval(ppuId);
+    //     console.error(e);
+    //     console.log(this);
+    //   }
+    // }, 100 / 1000);
   }
 
   public onChange(handler: (nes: this) => void) {

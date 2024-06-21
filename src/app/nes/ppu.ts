@@ -85,9 +85,9 @@ export default class PPU {
 
   // TODO: 属性テーブルやpaletteを反映させる
   public render() {
-    // vblankを描画
-    // 256x20 ピクセル、各ピクセル4チャネル (RGBA)
-    this.setPPUSTATUS(true, false, false, false);
+    // // vblankを描画
+    // // 256x20 ピクセル、各ピクセル4チャネル (RGBA)
+    // this.setPPUSTATUS(true, false, false, false);
 
     // 256x240 ピクセル、各ピクセル4チャネル (RGBA)
     const display = new Uint8Array(256 * 240 * 4);
@@ -133,9 +133,9 @@ export default class PPU {
     //   }
     // }
 
-    setTimeout(() => {
-      this.setPPUSTATUS(false, false, false, false);
-    }, 250);
+    // setTimeout(() => {
+    //   this.setPPUSTATUS(true, false, false, false);
+    // }, 250);
 
     return display;
   }
@@ -175,6 +175,12 @@ export default class PPU {
       default:
         throw new Error(`invalid address!! ${cpuAddress.toHexString()}`);
     }
+  }
+
+  // 本来はscanlineの描画後20line分の描画時間をVBlankの時間に充てるべきだが、
+  // CPUとの処理のタイミングが上手く噛み合わないため、手動でVBlankをセットする
+  public setVBlank(isVBlank: boolean) {
+    this.setPPUSTATUS(isVBlank, false, false, false);
   }
 
   private setPPUCTRL(data: Bit8) {
