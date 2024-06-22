@@ -67,12 +67,12 @@ export default class CPU {
   public execute() {
     const opcode = this.fetch();
 
-    // console.log(
-    //   this.registers.pc.get().toHexString(),
-    //   opcode.toHexString(),
-    //   OPCODES[opcode.toNumber()].mnemonics,
-    //   this.bus.read(new Bit16(0x2002)).toNumber()
-    // );
+    console.log(
+      this.registers.pc.get().toHexString(),
+      opcode.toHexString(),
+      OPCODES[opcode.toNumber()].mnemonics,
+      this.bus.read(new Bit16(0x2002)).toNumber()
+    );
 
     switch (opcode.toNumber()) {
       case 0x00:
@@ -626,12 +626,9 @@ export default class CPU {
     const address = this.getOperand(addressingMode);
 
     // 次の命令のアドレス - 1の2byte分をstackにpushする
-    const returnAddressUpper = new Bit8(
-      this.registers.pc.get().toNumber() >> 8
-    );
-    const returnAddressLower = new Bit8(
-      this.registers.pc.get().toNumber() & 0xff
-    );
+    const returnAddress = this.registers.pc.get().dec();
+    const returnAddressUpper = new Bit8(returnAddress.toNumber() >> 8);
+    const returnAddressLower = new Bit8(returnAddress.toNumber() & 0xff);
     const stackAddress = new Bit16(
       this.registers.stackPointer.get().toNumber()
     ).add(0x0100);
@@ -640,7 +637,6 @@ export default class CPU {
     this.registers.stackPointer.set(
       this.registers.stackPointer.get().dec().dec()
     );
-
     this.registers.pc.set(address);
   }
 
