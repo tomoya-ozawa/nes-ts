@@ -912,14 +912,26 @@ export default class CPU {
     opcode: number,
     addressingMode: "immediate" | "zeropage" | "absolute"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const x = this.registers.x.get();
+    const result = x.subtract(operand);
+
+    this.updateStatus(result, ["n", "z"]);
+    // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
+    this.registers.status.c = x.toNumber() > operand.toNumber() ? 1 : 0;
   }
 
   private cpy(
     opcode: number,
     addressingMode: "immediate" | "zeropage" | "absolute"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const y = this.registers.y.get();
+    const result = y.subtract(operand);
+
+    this.updateStatus(result, ["n", "z"]);
+    // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
+    this.registers.status.c = y.toNumber() > operand.toNumber() ? 1 : 0;
   }
 
   private cmp(
@@ -934,7 +946,13 @@ export default class CPU {
       | "absoluteY"
       | "indirectY"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const a = this.registers.a.get();
+    const result = a.subtract(operand);
+
+    this.updateStatus(result, ["n", "z"]);
+    // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
+    this.registers.status.c = a.toNumber() > operand.toNumber() ? 1 : 0;
   }
 
   private dec(
@@ -950,7 +968,9 @@ export default class CPU {
   }
 
   private dex(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const value = this.registers.x.get().dec();
+    this.registers.x.set(value);
+    this.updateStatus(value, ["n", "z"]);
   }
 
   private cld(opcode: number, addressingMode: "implied") {
@@ -965,7 +985,10 @@ export default class CPU {
     opcode: number,
     addressingMode: "zeropage" | "zeropageX" | "absolute" | "absoluteX"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const value = this.bus.read(operand).inc();
+    this.bus.write(operand, value);
+    this.updateStatus(value, ["n", "z"]);
   }
 
   private sbc(
@@ -1017,7 +1040,7 @@ export default class CPU {
     }
   }
 
-  private updateStatus(value: Bit8, updateFlags: Array<"n" | "z">) {
+  private updateStatus(value: Bit8, updateFlags: Array<"n" | "z" | "c">) {
     if (updateFlags.includes("n")) {
       this.registers.status.n = value.isMostSignificantBitSet() ? 1 : 0;
     }
@@ -1042,18 +1065,31 @@ export default class CPU {
         return this.fetch();
       case "accumulator":
         return this.registers.a.get();
-      case "relative":
+      case "relative": {
         const operand = this.fetch().getSignedInt();
         return this.registers.pc.get().add(operand);
+      }
       case "zeropageX":
         return this.fetch().add(this.registers.x.get());
       case "zeropageY":
         return this.fetch().add(this.registers.y.get());
       //アドレス「アドレス「IM8 + X」の16bit値」の8bit値
-      case "indirectX":
+      case "indirectX": {
+        const base = this.fetch().add(this.registers.x.get());
+        const lower = this.bus.read(base);
+        const upper = this.bus.read(base.inc());
+        const address = Bit16.fromBytes(lower, upper);
+        return this.bus.read(address);
+      }
       // アドレス「アドレス「IM8」の16bit値 + Y」の8bit値を
       case "indirectY": {
-        throw new Error("implement indirect!!");
+        const base = this.fetch();
+        const lower = this.bus.read(base);
+        const upper = this.bus.read(base.inc());
+        const address = Bit16.fromBytes(lower, upper).add(
+          this.registers.y.get()
+        );
+        return this.bus.read(address);
       }
       case "indirect": {
         const address = Bit16.fromBytes(this.fetch(), this.fetch());
