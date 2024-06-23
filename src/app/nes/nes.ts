@@ -125,9 +125,8 @@ export default class NES {
     }
 
     // $4000–$4017	$0018	NES APU and I/O registers
-    if (addressValue >= 0x4000 && addressValue <= 0x4017) {
-      // this.apu.get(address.subtract(0x4000));
-      throw new Error("implement apu!");
+    if (addressValue >= 0x4000 && addressValue <= 0x4015) {
+      return this.apu.read(address);
     }
 
     // $4018–$401F$0008	APU and I/O functionality that is normally disabled. See CPU Test Mode.
@@ -179,8 +178,14 @@ export default class NES {
     }
 
     // $4000–$4017	$0018	NES APU and I/O registers
-    if (addressValue >= 0x4000 && addressValue <= 0x4017) {
+    if (addressValue >= 0x4000 && addressValue <= 0x4015) {
       this.apu.write(address, data);
+      return;
+    }
+
+    // joystick
+    if (addressValue === 0x4016) {
+      // this.apu.write(address, data);
       return;
     }
 

@@ -156,9 +156,6 @@ export default class APU {
       case 0x4015:
         this.registers.dmc.r5.set(data);
         break;
-      case 0x4017:
-        this.registers.dmc.r6.set(data);
-        break;
 
       default:
         throw new Error(`invalid address!! ${cpuAddress.toHexString()}`);
