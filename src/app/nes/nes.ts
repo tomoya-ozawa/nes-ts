@@ -45,11 +45,13 @@ export default class NES {
 
   public start() {
     this.cpu.init();
+
     const cpuId = setInterval(() => {
       try {
         // TODO: 20 / 260 = 0.08 の時間をVBlank中の時間として設定。描画や動作がおかしくなるようであれば修正する
+        const instructionsPerFrame = 1000;
         let count = 0;
-        while (count < 92) {
+        while (count < instructionsPerFrame * 0.92) {
           this.cpu.execute();
           count++;
         }
@@ -57,8 +59,14 @@ export default class NES {
         this.display = this.ppu.render();
         this.emitChange();
 
-        while (count < 100) {
-          this.ppu.setVBlank(true);
+        this.ppu.setVBlank(true);
+
+        // TODO: vblank時にnmiが発生させる設定であるかつ、CPUが割り込みを許可していれば、NMIを実行する
+        // // レジスタの値が変わってもいいのか?
+        // if (this.ppu.getPPUSTATUS()) {
+        //   this.
+        // }
+        while (count < instructionsPerFrame) {
           this.cpu.execute();
           count++;
         }
@@ -69,17 +77,7 @@ export default class NES {
         console.error(e);
         console.log(this);
       }
-    }, 0);
-
-    // const ppuId = setInterval(() => {
-    //   try {
-    //     this.display = this.ppu.render();
-    //   } catch (e) {
-    //     clearInterval(ppuId);
-    //     console.error(e);
-    //     console.log(this);
-    //   }
-    // }, 100 / 1000);
+    }, 1000 / 60);
   }
 
   public onChange(handler: (nes: this) => void) {
