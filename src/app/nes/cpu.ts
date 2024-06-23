@@ -67,12 +67,12 @@ export default class CPU {
   public execute() {
     const opcode = this.fetch();
 
-    console.log(
-      this.registers.pc.get().toHexString(),
-      opcode.toHexString(),
-      OPCODES[opcode.toNumber()].mnemonics,
-      this.bus.read(new Bit16(0x2002)).toNumber()
-    );
+    // console.log(
+    //   this.registers.pc.get().toHexString(),
+    //   opcode.toHexString(),
+    //   OPCODES[opcode.toNumber()].mnemonics,
+    //   this.bus.read(new Bit16(0x2002)).toNumber()
+    // );
 
     switch (opcode.toNumber()) {
       case 0x00:
@@ -619,7 +619,7 @@ export default class CPU {
   }
 
   private clc(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.status.c = 0;
   }
 
   private jsr(opcode: number, addressingMode: "relative" | "absolute") {
@@ -676,11 +676,14 @@ export default class CPU {
   }
 
   private bmi(opcode: number, addressingMode: "relative") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    if (this.registers.status.n === 1) {
+      this.registers.pc.set(operand);
+    }
   }
 
   private sec(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.status.c = 1;
   }
 
   private rti(opcode: number, addressingMode: "implied") {
@@ -716,15 +719,20 @@ export default class CPU {
   }
 
   private pha(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const stackAddress = this.registers.stackPointer.get().add(0x0100);
+    this.bus.write(stackAddress, this.registers.a.get());
+    this.registers.stackPointer.set(this.registers.stackPointer.get().dec());
   }
 
   private bvc(opcode: number, addressingMode: "relative") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    if (this.registers.status.v === 0) {
+      this.registers.pc.set(operand);
+    }
   }
 
   private cli(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.status.i = 1;
   }
 
   private rts(opcode: number, addressingMode: "implied") {
@@ -762,7 +770,15 @@ export default class CPU {
       | "absoluteY"
       | "absoluteX"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const a = this.registers.a.get();
+    const value = a.toNumber() + operand.toNumber() + this.registers.status.c;
+    const bit8Value = new Bit8(value);
+
+    this.registers.a.set(bit8Value);
+    this.updateStatus(bit8Value, ["n", "z"]);
+    this.registers.status.v = a.getNthBit(7) !== bit8Value.getNthBit(7) ? 1 : 0;
+    this.registers.status.c = value > 0xff ? 1 : 0;
   }
 
   private ror(
@@ -780,11 +796,16 @@ export default class CPU {
   }
 
   private pla(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.stackPointer.set(this.registers.stackPointer.get().dec());
+    const stackAddress = this.registers.stackPointer.get().add(0x0100);
+    this.registers.a.set(this.bus.read(stackAddress));
   }
 
   private bvs(opcode: number, addressingMode: "relative") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    if (this.registers.status.v === 1) {
+      this.registers.pc.set(operand);
+    }
   }
 
   private sei(opcode: number, addressingMode: "implied") {
@@ -792,11 +813,13 @@ export default class CPU {
   }
 
   private txa(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.a.set(this.registers.x.get());
+    this.updateStatus(this.registers.a.get(), ["n", "z"]);
   }
 
   private tax(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.x.set(this.registers.a.get());
+    this.updateStatus(this.registers.x.get(), ["n", "z"]);
   }
 
   private txs(opcode: number, addressingMode: "implied") {
@@ -805,11 +828,13 @@ export default class CPU {
   }
 
   private tya(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.a.set(this.registers.y.get());
+    this.updateStatus(this.registers.a.get(), ["n", "z"]);
   }
 
   private tay(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.y.set(this.registers.a.get());
+    this.updateStatus(this.registers.y.get(), ["n", "z"]);
   }
 
   private lda(
@@ -893,11 +918,17 @@ export default class CPU {
   }
 
   private bcc(opcode: number, addressingMode: "relative") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    if (this.registers.status.c === 0) {
+      this.registers.pc.set(operand);
+    }
   }
 
   private bcs(opcode: number, addressingMode: "relative") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    if (this.registers.status.c === 1) {
+      this.registers.pc.set(operand);
+    }
   }
 
   private clv(opcode: number, addressingMode: "implied") {
@@ -978,7 +1009,7 @@ export default class CPU {
   }
 
   private nop(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    return;
   }
 
   private inc(
@@ -1012,7 +1043,10 @@ export default class CPU {
   }
 
   private beq(opcode: number, addressingMode: "relative") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    if (this.registers.status.z === 1) {
+      this.registers.pc.set(operand);
+    }
   }
 
   private inx(opcode: number, addressingMode: "implied") {
