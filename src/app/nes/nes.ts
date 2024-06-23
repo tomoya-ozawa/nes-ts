@@ -228,6 +228,12 @@ export default class NES {
       return;
     }
 
+    // https://www.nesdev.org/wiki/APU_Frame_Counter
+    if (addressValue <= 0x4017) {
+      this.apu.write(address, data);
+      return;
+    }
+
     throw new Error(
       `unimplemented memory map writeByCPU: ${address.toHexString()}`
     );

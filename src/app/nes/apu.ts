@@ -52,6 +52,7 @@ type Registers = {
     // $4017	SD-- ----	Frame counter: 5-frame sequence, disable frame interrupt (write)
     r6: Bit8Register;
   };
+  frameCounter: Bit8Register;
 };
 
 export default class APU {
@@ -86,6 +87,7 @@ export default class APU {
       r5: new Bit8Register(new Bit8(0)),
       r6: new Bit8Register(new Bit8(0)),
     },
+    frameCounter: new Bit8Register(new Bit8(0)),
   };
 
   constructor() {}
@@ -155,6 +157,9 @@ export default class APU {
         break;
       case 0x4015:
         this.registers.dmc.r5.set(data);
+        break;
+      case 0x4017:
+        this.registers.frameCounter.set(data);
         break;
 
       default:
