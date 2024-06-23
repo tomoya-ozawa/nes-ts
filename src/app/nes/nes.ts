@@ -60,15 +60,15 @@ export default class NES {
         }
 
         this.display = this.ppu.render();
+
         this.emitChange();
 
         this.ppu.setVBlank(true);
 
-        // TODO: vblank時にnmiが発生させる設定であるかつ、CPUが割り込みを許可していれば、NMIを実行する
-        // // レジスタの値が変わってもいいのか?
-        // if (this.ppu.getPPUSTATUS()) {
-        //   this.
-        // }
+        if (this.ppu.shouldNMIOnVBlank()) {
+          this.cpu.nmi();
+        }
+
         while (count < instructionsPerFrame) {
           this.cpu.execute();
           count++;

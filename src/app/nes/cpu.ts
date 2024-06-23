@@ -32,6 +32,22 @@ export default class CPU {
     this.registers.pc.set(counter);
   }
 
+  public nmi() {
+    this.pushToStack(this.registers.s.get());
+
+    const returnAddress = this.registers.pc.get();
+    const returnAddressUpper = new Bit8(returnAddress.toNumber() >> 8);
+    const returnAddressLower = new Bit8(returnAddress.toNumber() & 0xff);
+
+    this.pushToStack(returnAddressUpper);
+    this.pushToStack(returnAddressLower);
+
+    const lower = this.bus.read(new Bit16(0xfffa));
+    const upper = this.bus.read(new Bit16(0xfffb));
+    const counter = Bit16.fromBytes(lower, upper);
+    this.registers.pc.set(counter);
+  }
+
   public fetch(): Bit8 {
     const op = this.bus.read(this.registers.pc.get());
     this.registers.pc.set(this.registers.pc.get().inc());
@@ -677,7 +693,12 @@ export default class CPU {
   }
 
   private rti(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const returnAddressLower = this.popToStack();
+    const returnAddressUpper = this.popToStack();
+    const statusFlags = this.popToStack();
+    const counter = Bit16.fromBytes(returnAddressLower, returnAddressUpper);
+    this.registers.pc.set(counter);
+    this.registers.s.set(statusFlags);
   }
 
   private eor(

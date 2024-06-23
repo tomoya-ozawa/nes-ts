@@ -183,6 +183,12 @@ export default class PPU {
     this.setPPUSTATUS(isVBlank, false, false, false);
   }
 
+  // 本来はppuの中からnmiをcallすべきだが、vblankの処理をNES classで行っているため、
+  // NES classがフラグを取得できるようにする
+  public shouldNMIOnVBlank(): boolean {
+    return !!this.registers.ppuctrl.vBlankOnNMI;
+  }
+
   private setPPUCTRL(data: Bit8) {
     const zero = data.getNthBit(0);
     const one = data.getNthBit(1);
