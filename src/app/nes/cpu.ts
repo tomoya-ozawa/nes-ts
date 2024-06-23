@@ -629,14 +629,9 @@ export default class CPU {
     const returnAddress = this.registers.pc.get().dec();
     const returnAddressUpper = new Bit8(returnAddress.toNumber() >> 8);
     const returnAddressLower = new Bit8(returnAddress.toNumber() & 0xff);
-    const stackAddress = new Bit16(
-      this.registers.stackPointer.get().toNumber()
-    ).add(0x0100);
-    this.bus.write(stackAddress, returnAddressUpper);
-    this.bus.write(stackAddress.dec(), returnAddressLower);
-    this.registers.stackPointer.set(
-      this.registers.stackPointer.get().dec().dec()
-    );
+
+    this.pushToStack(returnAddressUpper);
+    this.pushToStack(returnAddressLower);
     this.registers.pc.set(address);
   }
 
@@ -719,9 +714,7 @@ export default class CPU {
   }
 
   private pha(opcode: number, addressingMode: "implied") {
-    const stackAddress = this.registers.stackPointer.get().add(0x0100);
-    this.bus.write(stackAddress, this.registers.a.get());
-    this.registers.stackPointer.set(this.registers.stackPointer.get().dec());
+    this.pushToStack(this.registers.a.get());
   }
 
   private bvc(opcode: number, addressingMode: "relative") {
@@ -736,21 +729,14 @@ export default class CPU {
   }
 
   private rts(opcode: number, addressingMode: "implied") {
-    // 戻りアドレスを pop し、そのアドレスに 1 を加えたアドレスへジャンプ
-    // 次の命令のアドレス - 1の2byte分をstackにpushする
-    this.registers.stackPointer.set(this.registers.stackPointer.get().inc());
-    const stackAddress = new Bit16(
-      this.registers.stackPointer.get().toNumber()
-    ).add(0x0100);
-
-    const returnAddressLower = this.bus.read(stackAddress);
-    const returnAddressUpper = this.bus.read(stackAddress.inc());
+    // // 戻りアドレスを pop し、そのアドレスに 1 を加えたアドレスへジャンプ
+    const returnAddressLower = this.popToStack();
+    const returnAddressUpper = this.popToStack();
     const returnAddress = Bit16.fromBytes(
       returnAddressLower,
       returnAddressUpper
     ).inc();
 
-    this.registers.stackPointer.set(this.registers.stackPointer.get().inc());
     this.registers.pc.set(returnAddress);
   }
 
@@ -796,9 +782,7 @@ export default class CPU {
   }
 
   private pla(opcode: number, addressingMode: "implied") {
-    this.registers.stackPointer.set(this.registers.stackPointer.get().dec());
-    const stackAddress = this.registers.stackPointer.get().add(0x0100);
-    this.registers.a.set(this.bus.read(stackAddress));
+    this.registers.a.set(this.popToStack());
   }
 
   private bvs(opcode: number, addressingMode: "relative") {
@@ -1083,13 +1067,28 @@ export default class CPU {
     }
   }
 
+  private pushToStack(data: Bit8) {
+    const stackAddress = new Bit16(
+      this.registers.stackPointer.get().toNumber()
+    ).add(0x0100);
+    this.bus.write(stackAddress, data);
+    this.registers.stackPointer.set(this.registers.stackPointer.get().dec());
+  }
+
+  private popToStack() {
+    this.registers.stackPointer.set(this.registers.stackPointer.get().inc());
+    const stackAddress = new Bit16(
+      this.registers.stackPointer.get().toNumber()
+    ).add(0x0100);
+    return this.bus.read(stackAddress);
+  }
+
   // d,x	Zero page indexed	val = PEEK((arg + X) % 256)	4
   // d,y	Zero page indexed	val = PEEK((arg + Y) % 256)	4
   // a,x	Absolute indexed	val = PEEK(arg + X)	4+
   // a,y	Absolute indexed	val = PEEK(arg + Y)	4+
   // (d,x)	Indexed indirect	val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)	6
   // (d),y	Indirect indexed	val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)	5+
-
   private getOperand(
     mode: Exclude<Opcode["addressingMode"], "implied">
   ): Bit8 | Bit16 {
