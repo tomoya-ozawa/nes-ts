@@ -2,6 +2,7 @@ import { Bit16, Bit8 } from "./bit";
 import CPU from "./cpu";
 import { Mapper, getMappers } from "./mappers";
 import PPU from "./ppu";
+import APU from "./apu";
 import RAM from "./ram";
 
 export type CpuBus = {
@@ -16,6 +17,7 @@ export default class NES {
   private cpu: CPU;
   private ram: RAM;
   private ppu: PPU;
+  private apu: APU;
   private mapper: Mapper;
   private chrom: Uint8Array;
   private onChangeHandler: (nes: this) => void = () => {};
@@ -38,6 +40,7 @@ export default class NES {
     );
     this.chrom = rom.slice(chRomStartAddress, chRomEndAddress);
     this.ppu = new PPU(this.chrom);
+    this.apu = new APU();
   }
 
   public start() {
@@ -179,8 +182,8 @@ export default class NES {
 
     // $4000–$4017	$0018	NES APU and I/O registers
     if (addressValue >= 0x4000 && addressValue <= 0x4017) {
-      // this.apu.set(address.subtract(0x4000), data);
-      throw new Error("implement apu!");
+      this.apu.write(address, data);
+      return;
     }
 
     throw new Error(
