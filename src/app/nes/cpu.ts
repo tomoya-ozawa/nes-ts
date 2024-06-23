@@ -1,7 +1,7 @@
 import { Bit8, Bit16 } from "./bit";
 import { CpuBus } from "./nes";
 import OPCODES, { Opcode } from "./opcodes";
-import { Bit16Register, Bit8Register } from "./registers";
+import { Bit16Register, Bit8Register, StatusRegister } from "./registers";
 
 type Registers = {
   a: Bit8Register;
@@ -9,24 +9,7 @@ type Registers = {
   y: Bit8Register;
   pc: Bit16Register;
   stackPointer: Bit8Register;
-  status: {
-    // 7	N	ネガティブ	Aの7ビット目と同じになります。負数の判定用。
-    n: 1 | 0;
-    // 6	V	オーバーフロー	演算がオーバーフローを起こした場合セットされます。
-    v: 1 | 0;
-    // 5	R	予約済み	使用できません。常にセットされています。
-    r: 1;
-    // 4	B	ブレークモード	BRK発生時はセットされ、IRQ発生時はクリアされます。
-    b: 1 | 0;
-    // 3	D	デシマルモード	セットすると、BCDモードで動作します。(ファミコンでは未実装)
-    d: 1 | 0;
-    // 2	I	IRQ禁止	クリアするとIRQが許可され、セットするとIRQが禁止になります。
-    i: 1 | 0;
-    // 1	Z	ゼロ	演算結果が0になった場合セットされます。ロード命令でも変化します。
-    z: 1 | 0;
-    // 0	C	キャリー	キャリー発生時セットされます。
-    c: 1 | 0;
-  };
+  s: StatusRegister;
 };
 
 export default class CPU {
@@ -37,16 +20,7 @@ export default class CPU {
     pc: new Bit16Register(new Bit16(0x8000)),
     // TODO: StackPointerのデフォルト値が0xffで正しいのか未確認
     stackPointer: new Bit8Register(new Bit8(0xff)),
-    status: {
-      n: 0,
-      v: 0,
-      r: 1,
-      b: 0,
-      d: 0,
-      i: 0,
-      z: 0,
-      c: 0,
-    },
+    s: new StatusRegister(new Bit8(0)),
   };
 
   public constructor(private bus: CpuBus) {}
@@ -577,7 +551,7 @@ export default class CPU {
   }
 
   private brk(opcode: number, addressingMode: "implied") {
-    this.registers.status.b = 1;
+    this.registers.s.b = 1;
   }
 
   private ora(
@@ -608,18 +582,18 @@ export default class CPU {
   }
 
   private php(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.pushToStack(this.registers.s.get());
   }
 
   private bpl(opcode: number, addressingMode: "relative") {
     const operand = this.getOperand(addressingMode);
-    if (this.registers.status.n === 0) {
+    if (this.registers.s.n === 0) {
       this.registers.pc.set(operand);
     }
   }
 
   private clc(opcode: number, addressingMode: "implied") {
-    this.registers.status.c = 0;
+    this.registers.s.c = 0;
   }
 
   private jsr(opcode: number, addressingMode: "relative" | "absolute") {
@@ -650,8 +624,18 @@ export default class CPU {
     throw new Error("unimplemented instruction" + opcode.toString(16));
   }
 
+  // bits 7 and 6 of operand are transfered to bit 7 and 6 of SR (N,V);
+  // the zero-flag is set according to the result of the operand AND
+  // the accumulator (set, if the result is zero, unset otherwise).
+  // This allows a quick check of a few bits at once without affecting
+  // any of the registers, other than the status register (SR).
   private bit(opcode: number, addressingMode: "zeropage" | "absolute") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const andResult = this.registers.a.get().toNumber() & operand.toNumber();
+
+    this.registers.s.n = operand.getNthBit(7);
+    this.registers.s.v = operand.getNthBit(6);
+    this.registers.s.z = andResult === 0 ? 1 : 0;
   }
 
   private rol(
@@ -667,18 +651,18 @@ export default class CPU {
   }
 
   private plp(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.s.set(this.popToStack());
   }
 
   private bmi(opcode: number, addressingMode: "relative") {
     const operand = this.getOperand(addressingMode);
-    if (this.registers.status.n === 1) {
+    if (this.registers.s.n === 1) {
       this.registers.pc.set(operand);
     }
   }
 
   private sec(opcode: number, addressingMode: "implied") {
-    this.registers.status.c = 1;
+    this.registers.s.c = 1;
   }
 
   private rti(opcode: number, addressingMode: "implied") {
@@ -719,13 +703,13 @@ export default class CPU {
 
   private bvc(opcode: number, addressingMode: "relative") {
     const operand = this.getOperand(addressingMode);
-    if (this.registers.status.v === 0) {
+    if (this.registers.s.v === 0) {
       this.registers.pc.set(operand);
     }
   }
 
   private cli(opcode: number, addressingMode: "implied") {
-    this.registers.status.i = 1;
+    this.registers.s.i = 1;
   }
 
   private rts(opcode: number, addressingMode: "implied") {
@@ -758,13 +742,13 @@ export default class CPU {
   ) {
     const operand = this.getOperand(addressingMode);
     const a = this.registers.a.get();
-    const value = a.toNumber() + operand.toNumber() + this.registers.status.c;
+    const value = a.toNumber() + operand.toNumber() + this.registers.s.c;
     const bit8Value = new Bit8(value);
 
     this.registers.a.set(bit8Value);
     this.updateStatus(bit8Value, ["n", "z"]);
-    this.registers.status.v = a.getNthBit(7) !== bit8Value.getNthBit(7) ? 1 : 0;
-    this.registers.status.c = value > 0xff ? 1 : 0;
+    this.registers.s.v = a.getNthBit(7) !== bit8Value.getNthBit(7) ? 1 : 0;
+    this.registers.s.c = value > 0xff ? 1 : 0;
   }
 
   private ror(
@@ -787,13 +771,13 @@ export default class CPU {
 
   private bvs(opcode: number, addressingMode: "relative") {
     const operand = this.getOperand(addressingMode);
-    if (this.registers.status.v === 1) {
+    if (this.registers.s.v === 1) {
       this.registers.pc.set(operand);
     }
   }
 
   private sei(opcode: number, addressingMode: "implied") {
-    this.registers.status.i = 1;
+    this.registers.s.i = 1;
   }
 
   private txa(opcode: number, addressingMode: "implied") {
@@ -903,14 +887,14 @@ export default class CPU {
 
   private bcc(opcode: number, addressingMode: "relative") {
     const operand = this.getOperand(addressingMode);
-    if (this.registers.status.c === 0) {
+    if (this.registers.s.c === 0) {
       this.registers.pc.set(operand);
     }
   }
 
   private bcs(opcode: number, addressingMode: "relative") {
     const operand = this.getOperand(addressingMode);
-    if (this.registers.status.c === 1) {
+    if (this.registers.s.c === 1) {
       this.registers.pc.set(operand);
     }
   }
@@ -920,7 +904,7 @@ export default class CPU {
   }
 
   private tsx(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.x.set(this.registers.stackPointer.get());
   }
 
   private cpx(
@@ -933,7 +917,7 @@ export default class CPU {
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.status.c = x.toNumber() > operand.toNumber() ? 1 : 0;
+    this.registers.s.c = x.toNumber() > operand.toNumber() ? 1 : 0;
   }
 
   private cpy(
@@ -946,7 +930,7 @@ export default class CPU {
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.status.c = y.toNumber() > operand.toNumber() ? 1 : 0;
+    this.registers.s.c = y.toNumber() > operand.toNumber() ? 1 : 0;
   }
 
   private cmp(
@@ -967,7 +951,7 @@ export default class CPU {
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.status.c = a.toNumber() > operand.toNumber() ? 1 : 0;
+    this.registers.s.c = a.toNumber() > operand.toNumber() ? 1 : 0;
   }
 
   private dec(
@@ -989,7 +973,7 @@ export default class CPU {
   }
 
   private cld(opcode: number, addressingMode: "implied") {
-    this.registers.status.d = 1;
+    this.registers.s.d = 1;
   }
 
   private nop(opcode: number, addressingMode: "implied") {
@@ -1028,7 +1012,7 @@ export default class CPU {
 
   private beq(opcode: number, addressingMode: "relative") {
     const operand = this.getOperand(addressingMode);
-    if (this.registers.status.z === 1) {
+    if (this.registers.s.z === 1) {
       this.registers.pc.set(operand);
     }
   }
@@ -1053,17 +1037,17 @@ export default class CPU {
 
   private bne(opcode: number, addressingMode: "relative") {
     const operand = this.getOperand(addressingMode);
-    if (this.registers.status.z === 0) {
+    if (this.registers.s.z === 0) {
       this.registers.pc.set(operand);
     }
   }
 
   private updateStatus(value: Bit8, updateFlags: Array<"n" | "z" | "c">) {
     if (updateFlags.includes("n")) {
-      this.registers.status.n = value.isMostSignificantBitSet() ? 1 : 0;
+      this.registers.s.n = value.isMostSignificantBitSet() ? 1 : 0;
     }
     if (updateFlags.includes("z")) {
-      this.registers.status.z = value.toNumber() === 0 ? 1 : 0;
+      this.registers.s.z = value.toNumber() === 0 ? 1 : 0;
     }
   }
 
