@@ -44,7 +44,7 @@ export default class NES {
   }
 
   public start() {
-    this.cpu.init();
+    this.cpu.reset();
 
     const cpuId = setInterval(() => {
       try {
