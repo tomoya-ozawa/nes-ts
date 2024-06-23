@@ -630,11 +630,11 @@ export default class CPU {
   // This allows a quick check of a few bits at once without affecting
   // any of the registers, other than the status register (SR).
   private bit(opcode: number, addressingMode: "zeropage" | "absolute") {
-    const operand = this.getOperand(addressingMode);
-    const andResult = this.registers.a.get().toNumber() & operand.toNumber();
+    const value = this.bus.read(this.getOperand(addressingMode));
+    const andResult = this.registers.a.get().toNumber() & value.toNumber();
 
-    this.registers.s.n = operand.getNthBit(7);
-    this.registers.s.v = operand.getNthBit(6);
+    this.registers.s.n = value.getNthBit(7);
+    this.registers.s.v = value.getNthBit(6);
     this.registers.s.z = andResult === 0 ? 1 : 0;
   }
 
@@ -741,8 +741,10 @@ export default class CPU {
       | "absoluteX"
   ) {
     const operand = this.getOperand(addressingMode);
+    const target =
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
     const a = this.registers.a.get();
-    const value = a.toNumber() + operand.toNumber() + this.registers.s.c;
+    const value = a.toNumber() + target.toNumber() + this.registers.s.c;
     const bit8Value = new Bit8(value);
 
     this.registers.a.set(bit8Value);
@@ -912,12 +914,14 @@ export default class CPU {
     addressingMode: "immediate" | "zeropage" | "absolute"
   ) {
     const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
     const x = this.registers.x.get();
-    const result = x.subtract(operand);
+    const result = x.subtract(value);
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.s.c = x.toNumber() > operand.toNumber() ? 1 : 0;
+    this.registers.s.c = x.toNumber() > value.toNumber() ? 1 : 0;
   }
 
   private cpy(
@@ -925,12 +929,14 @@ export default class CPU {
     addressingMode: "immediate" | "zeropage" | "absolute"
   ) {
     const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
     const y = this.registers.y.get();
-    const result = y.subtract(operand);
+    const result = y.subtract(value);
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.s.c = y.toNumber() > operand.toNumber() ? 1 : 0;
+    this.registers.s.c = y.toNumber() > value.toNumber() ? 1 : 0;
   }
 
   private cmp(
@@ -946,12 +952,14 @@ export default class CPU {
       | "indirectY"
   ) {
     const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
     const a = this.registers.a.get();
-    const result = a.subtract(operand);
+    const result = a.subtract(value);
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.s.c = a.toNumber() > operand.toNumber() ? 1 : 0;
+    this.registers.s.c = a.toNumber() > value.toNumber() ? 1 : 0;
   }
 
   private dec(
