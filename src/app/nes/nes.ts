@@ -4,6 +4,7 @@ import { Mapper, getMappers } from "./mappers";
 import PPU from "./ppu";
 import APU from "./apu";
 import RAM from "./ram";
+import JoyStick from "./joystick";
 
 export type CpuBus = {
   read: (address: Bit8 | Bit16) => Bit8;
@@ -18,6 +19,7 @@ export default class NES {
   private ram: RAM;
   private ppu: PPU;
   private apu: APU;
+  private joystick: JoyStick;
   private mapper: Mapper;
   private chrom: Uint8Array;
   private onChangeHandler: (nes: this) => void = () => {};
@@ -41,6 +43,7 @@ export default class NES {
     this.chrom = rom.slice(chRomStartAddress, chRomEndAddress);
     this.ppu = new PPU(this.chrom);
     this.apu = new APU();
+    this.joystick = new JoyStick();
   }
 
   public start() {
@@ -82,6 +85,38 @@ export default class NES {
 
   public onChange(handler: (nes: this) => void) {
     this.onChangeHandler = handler;
+  }
+
+  public ctrlUp(pressed: boolean) {
+    this.joystick.ctrlUp(pressed);
+  }
+
+  public ctrlDown(pressed: boolean) {
+    this.joystick.ctrlDown(pressed);
+  }
+
+  public ctrlLeft(pressed: boolean) {
+    this.joystick.ctrlLeft(pressed);
+  }
+
+  public ctrlRight(pressed: boolean) {
+    this.joystick.ctrlRight(pressed);
+  }
+
+  public ctrlA(pressed: boolean) {
+    this.joystick.ctrlA(pressed);
+  }
+
+  public ctrlB(pressed: boolean) {
+    this.joystick.ctrlB(pressed);
+  }
+
+  public ctrlSelect(pressed: boolean) {
+    this.joystick.ctrlSelect(pressed);
+  }
+
+  public ctrlStart(pressed: boolean) {
+    this.joystick.ctrlStart(pressed);
   }
 
   private emitChange() {
@@ -127,6 +162,10 @@ export default class NES {
     // $4000–$4017	$0018	NES APU and I/O registers
     if (addressValue >= 0x4000 && addressValue <= 0x4015) {
       return this.apu.read(address);
+    }
+
+    if (addressValue === 0x4016) {
+      return this.joystick.read();
     }
 
     // $4018–$401F$0008	APU and I/O functionality that is normally disabled. See CPU Test Mode.
@@ -185,7 +224,7 @@ export default class NES {
 
     // joystick
     if (addressValue === 0x4016) {
-      // this.apu.write(address, data);
+      this.joystick.write(data);
       return;
     }
 
