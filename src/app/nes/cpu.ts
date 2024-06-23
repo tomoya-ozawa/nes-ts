@@ -578,7 +578,18 @@ export default class CPU {
       | "absoluteX"
       | "zeropageX"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const value = operand.toNumber() << 1;
+    const bitValue = new Bit8(value);
+
+    if (addressingMode === "accumulator") {
+      this.registers.a.set(bitValue);
+    } else {
+      this.bus.write(operand, bitValue);
+    }
+
+    this.updateStatus(bitValue, ["n", "z"]);
+    this.registers.s.c = value > 0xff ? 1 : 0;
   }
 
   private php(opcode: number, addressingMode: "implied") {
