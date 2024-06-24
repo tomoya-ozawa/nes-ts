@@ -1,3 +1,4 @@
+import { TestLogger } from "./TestLogger";
 import { Bit8, Bit16 } from "./bit";
 import { CpuBus } from "./nes";
 import OPCODES, { Opcode } from "./opcodes";
@@ -19,17 +20,18 @@ export default class CPU {
     y: new Bit8Register(new Bit8(0)),
     pc: new Bit16Register(new Bit16(0x8000)),
     // TODO: StackPointerのデフォルト値が0xffで正しいのか未確認
-    stackPointer: new Bit8Register(new Bit8(0xff)),
-    s: new StatusRegister(new Bit8(0)),
+    // TODO: nestestが終わったら、stackPointerとsのデフォルト値を戻す
+    stackPointer: new Bit8Register(new Bit8(0xfd)),
+    s: new StatusRegister(new Bit8(0x24)),
   };
 
-  public constructor(private bus: CpuBus) {}
+  public constructor(private bus: CpuBus, private logger: TestLogger) {}
 
   public reset() {
     const lower = this.bus.read(new Bit16(0xfffc));
     const upper = this.bus.read(new Bit16(0xfffd));
     const counter = Bit16.fromBytes(lower, upper);
-    this.registers.pc.set(counter);
+    this.registers.pc.set(new Bit16(0xc000));
   }
 
   public nmi() {
@@ -50,20 +52,31 @@ export default class CPU {
 
   public fetch(): Bit8 {
     const op = this.bus.read(this.registers.pc.get());
+    this.logger.push(op);
     this.registers.pc.set(this.registers.pc.get().inc());
     return op;
   }
 
   public execute() {
+    this.logger.push(this.registers.pc.get());
     const opcode = this.fetch();
+    this.execOpecode(opcode);
+    this.logger.push(OPCODES[opcode.toNumber()].mnemonics[0]);
+    this.logger.push(`A:${this.registers.a.get().toHexString()}`);
+    this.logger.push(`X:${this.registers.x.get().toHexString()}`);
+    this.logger.push(`Y:${this.registers.y.get().toHexString()}`);
+    this.logger.push(`P:${this.registers.s.get().toHexString()}`);
+    this.logger.push(`SP:${this.registers.stackPointer.get().toHexString()}`);
+    this.logger.break();
+  }
+  // console.log(
+  //   this.registers.pc.get().toHexString(),
+  //   opcode.toHexString(),
+  //   OPCODES[opcode.toNumber()].mnemonics,
+  //   this.bus.read(new Bit16(0x2002)).toNumber()
+  // );
 
-    // console.log(
-    //   this.registers.pc.get().toHexString(),
-    //   opcode.toHexString(),
-    //   OPCODES[opcode.toNumber()].mnemonics,
-    //   this.bus.read(new Bit16(0x2002)).toNumber()
-    // );
-
+  private execOpecode(opcode: Bit16) {
     switch (opcode.toNumber()) {
       case 0x00:
         return this.brk(0x0, "implied");

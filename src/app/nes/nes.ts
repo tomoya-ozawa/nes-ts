@@ -5,6 +5,7 @@ import PPU from "./ppu";
 import APU from "./apu";
 import RAM from "./ram";
 import JoyStick from "./joystick";
+import { TestLogger } from "./TestLogger";
 
 export type CpuBus = {
   read: (address: Bit8 | Bit16) => Bit8;
@@ -12,6 +13,8 @@ export type CpuBus = {
 };
 
 const NES_HEADER_SIZE = 0x10;
+
+const testLogger = new TestLogger();
 
 export default class NES {
   public display: Uint8Array = new Uint8Array();
@@ -26,7 +29,7 @@ export default class NES {
 
   public constructor(private rom: Uint8Array) {
     this.ram = new RAM();
-    this.cpu = new CPU(this.cpuBus());
+    this.cpu = new CPU(this.cpuBus(), testLogger);
 
     const pgRomSize = 0x4000 * rom[4];
     const chRomSize = 0x2000 * rom[5];
@@ -79,6 +82,7 @@ export default class NES {
         clearInterval(cpuId);
         console.error(e);
         console.log(this);
+        testLogger.dump();
       }
     }, 1000 / 60);
   }
