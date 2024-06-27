@@ -35,14 +35,13 @@ export default class CPU {
   }
 
   public nmi() {
-    this.pushToStack(this.registers.s.get());
-
     const returnAddress = this.registers.pc.get();
     const returnAddressUpper = new Bit8(returnAddress.toNumber() >> 8);
     const returnAddressLower = new Bit8(returnAddress.toNumber() & 0xff);
 
     this.pushToStack(returnAddressUpper);
     this.pushToStack(returnAddressLower);
+    this.pushToStack(this.registers.s.get());
 
     const lower = this.bus.read(new Bit16(0xfffa));
     const upper = this.bus.read(new Bit16(0xfffb));
@@ -52,7 +51,7 @@ export default class CPU {
 
   public fetch(): Bit8 {
     const op = this.bus.read(this.registers.pc.get());
-    this.logger.push(op);
+    this.logger.pushOpCode(op);
     this.registers.pc.set(this.registers.pc.get().inc());
     return op;
   }
@@ -60,23 +59,20 @@ export default class CPU {
   public execute() {
     this.logger.push(this.registers.pc.get());
     const opcode = this.fetch();
-    this.execOpecode(opcode);
     this.logger.push(OPCODES[opcode.toNumber()].mnemonics[0]);
     this.logger.push(`A:${this.registers.a.get().toHexString()}`);
     this.logger.push(`X:${this.registers.x.get().toHexString()}`);
     this.logger.push(`Y:${this.registers.y.get().toHexString()}`);
     this.logger.push(`P:${this.registers.s.get().toHexString()}`);
     this.logger.push(`SP:${this.registers.stackPointer.get().toHexString()}`);
-    this.logger.break();
-  }
-  // console.log(
-  //   this.registers.pc.get().toHexString(),
-  //   opcode.toHexString(),
-  //   OPCODES[opcode.toNumber()].mnemonics,
-  //   this.bus.read(new Bit16(0x2002)).toNumber()
-  // );
 
-  private execOpecode(opcode: Bit16) {
+    // console.log(
+    //   this.registers.pc.get().toHexString(),
+    //   opcode.toHexString(),
+    //   OPCODES[opcode.toNumber()].mnemonics,
+    //   this.bus.read(new Bit16(0x2002)).toNumber()
+    // );
+
     switch (opcode.toNumber()) {
       case 0x00:
         return this.brk(0x0, "implied");
@@ -581,6 +577,8 @@ export default class CPU {
 
   private brk(opcode: number, addressingMode: "implied") {
     this.registers.s.b = 1;
+    // TODO: スタックにpushする。その後、bフラグを0に戻す
+    // https://www.masswerk.at/6502/6502_instruction_set.html#BRK
   }
 
   private ora(
@@ -595,7 +593,15 @@ export default class CPU {
       | "absoluteY"
       | "indirectY"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
+    const result = new Bit8(
+      this.registers.a.get().toNumber() | value.toNumber()
+    );
+    this.registers.a.set(result);
+
+    this.updateStatus(result, ["n", "z"]);
   }
 
   private asl(
@@ -608,8 +614,10 @@ export default class CPU {
       | "zeropageX"
   ) {
     const operand = this.getOperand(addressingMode);
-    const value = operand.toNumber() << 1;
-    const bitValue = new Bit8(value);
+    const value =
+      addressingMode === "accumulator" ? operand : this.bus.read(operand);
+    const result = value.toNumber() << 1;
+    const bitValue = new Bit8(result);
 
     if (addressingMode === "accumulator") {
       this.registers.a.set(bitValue);
@@ -618,11 +626,14 @@ export default class CPU {
     }
 
     this.updateStatus(bitValue, ["n", "z"]);
-    this.registers.s.c = value > 0xff ? 1 : 0;
+    this.registers.s.c = result > 0xff ? 1 : 0;
   }
 
   private php(opcode: number, addressingMode: "implied") {
+    // https://www.nesdev.org/wiki/Status_flags#The_B_flag
+    this.registers.s.b = 1;
     this.pushToStack(this.registers.s.get());
+    this.registers.s.b = 0;
   }
 
   private bpl(opcode: number, addressingMode: "relative") {
@@ -661,7 +672,15 @@ export default class CPU {
       | "absoluteY"
       | "indirectY"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
+    const result = new Bit8(
+      this.registers.a.get().toNumber() & value.toNumber()
+    );
+    this.registers.a.set(result);
+
+    this.updateStatus(result, ["n", "z"]);
   }
 
   // bits 7 and 6 of operand are transfered to bit 7 and 6 of SR (N,V);
@@ -687,11 +706,27 @@ export default class CPU {
       | "zeropageX"
       | "absoluteX"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "accumulator" ? operand : this.bus.read(operand);
+    const carry = this.registers.s.c === 1 ? 0b00000001 : 0b00000000;
+    const result = (value.toNumber() << 1) | carry;
+    const bit8Result = new Bit8(result);
+
+    if (addressingMode === "accumulator") {
+      this.registers.a.set(bit8Result);
+    } else {
+      this.bus.write(operand, bit8Result);
+    }
+
+    this.updateStatus(bit8Result, ["n", "z"]);
+    this.registers.s.c = value.getNthBit(7);
   }
 
+  // The status register will be pulled with the break flag and bit 5 ignored.
   private plp(opcode: number, addressingMode: "implied") {
     this.registers.s.set(this.popToStack());
+    this.registers.s.b = 0;
   }
 
   private bmi(opcode: number, addressingMode: "relative") {
@@ -706,9 +741,9 @@ export default class CPU {
   }
 
   private rti(opcode: number, addressingMode: "implied") {
+    const statusFlags = this.popToStack();
     const returnAddressLower = this.popToStack();
     const returnAddressUpper = this.popToStack();
-    const statusFlags = this.popToStack();
     const counter = Bit16.fromBytes(returnAddressLower, returnAddressUpper);
     this.registers.pc.set(counter);
     this.registers.s.set(statusFlags);
@@ -727,7 +762,15 @@ export default class CPU {
       | "absolute"
       | "absoluteX"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
+    const result = new Bit8(
+      this.registers.a.get().toNumber() ^ value.toNumber()
+    );
+    this.registers.a.set(result);
+
+    this.updateStatus(result, ["n", "z"]);
   }
 
   private lsr(
@@ -739,7 +782,20 @@ export default class CPU {
       | "absoluteX"
       | "zeropageX"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "accumulator" ? operand : this.bus.read(operand);
+    const result = value.toNumber() >> 1;
+    const bitValue = new Bit8(result);
+
+    if (addressingMode === "accumulator") {
+      this.registers.a.set(bitValue);
+    } else {
+      this.bus.write(operand, bitValue);
+    }
+
+    this.updateStatus(bitValue, ["n", "z"]);
+    this.registers.s.c = result <= 0 ? 1 : 0;
   }
 
   private pha(opcode: number, addressingMode: "implied") {
@@ -786,16 +842,20 @@ export default class CPU {
       | "absoluteX"
   ) {
     const operand = this.getOperand(addressingMode);
-    const target =
+    const value =
       addressingMode === "immediate" ? operand : this.bus.read(operand);
     const a = this.registers.a.get();
-    const value = a.toNumber() + target.toNumber() + this.registers.s.c;
-    const bit8Value = new Bit8(value);
+    const result = a.toNumber() + value.toNumber() + this.registers.s.c;
+    const bit8Result = new Bit8(result);
 
-    this.registers.a.set(bit8Value);
-    this.updateStatus(bit8Value, ["n", "z"]);
-    this.registers.s.v = a.getNthBit(7) !== bit8Value.getNthBit(7) ? 1 : 0;
-    this.registers.s.c = value > 0xff ? 1 : 0;
+    this.updateStatus(bit8Result, ["n", "z"]);
+    this.registers.s.v =
+      a.getNthBit(7) === value.getNthBit(7) &&
+      a.getNthBit(7) !== bit8Result.getNthBit(7)
+        ? 1
+        : 0;
+    this.registers.s.c = result > 0xff ? 1 : 0;
+    this.registers.a.set(bit8Result);
   }
 
   private ror(
@@ -809,11 +869,27 @@ export default class CPU {
       | "absolute"
       | "absoluteX"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "accumulator" ? operand : this.bus.read(operand);
+    const carry = this.registers.s.c === 1 ? 0b10000000 : 0b00000000;
+    const result = carry | (value.toNumber() >> 1);
+    const bit8Result = new Bit8(result);
+
+    if (addressingMode === "accumulator") {
+      this.registers.a.set(bit8Result);
+    } else {
+      this.bus.write(operand, bit8Result);
+    }
+
+    this.updateStatus(bit8Result, ["n", "z"]);
+    this.registers.s.c = value.getNthBit(0);
   }
 
   private pla(opcode: number, addressingMode: "implied") {
-    this.registers.a.set(this.popToStack());
+    const value = this.popToStack();
+    this.registers.a.set(value);
+    this.updateStatus(value, ["n", "z"]);
   }
 
   private bvs(opcode: number, addressingMode: "relative") {
@@ -839,7 +915,6 @@ export default class CPU {
 
   private txs(opcode: number, addressingMode: "implied") {
     this.registers.stackPointer.set(this.registers.x.get());
-    this.updateStatus(this.registers.stackPointer.get(), ["n", "z"]);
   }
 
   private tya(opcode: number, addressingMode: "implied") {
@@ -947,11 +1022,12 @@ export default class CPU {
   }
 
   private clv(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.s.v = 0;
   }
 
   private tsx(opcode: number, addressingMode: "implied") {
     this.registers.x.set(this.registers.stackPointer.get());
+    this.updateStatus(this.registers.x.get(), ["n", "z"]);
   }
 
   private cpx(
@@ -966,7 +1042,7 @@ export default class CPU {
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.s.c = x.toNumber() > value.toNumber() ? 1 : 0;
+    this.registers.s.c = x.toNumber() >= value.toNumber() ? 1 : 0;
   }
 
   private cpy(
@@ -981,7 +1057,7 @@ export default class CPU {
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.s.c = y.toNumber() > value.toNumber() ? 1 : 0;
+    this.registers.s.c = y.toNumber() >= value.toNumber() ? 1 : 0;
   }
 
   private cmp(
@@ -1004,7 +1080,7 @@ export default class CPU {
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.s.c = a.toNumber() > value.toNumber() ? 1 : 0;
+    this.registers.s.c = a.toNumber() >= value.toNumber() ? 1 : 0;
   }
 
   private dec(
@@ -1016,7 +1092,16 @@ export default class CPU {
       | "zeropageX"
       | "absoluteX"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
+    const result = value.dec();
+
+    if (addressingMode !== "immediate") {
+      this.bus.write(operand, result);
+    }
+
+    this.updateStatus(result, ["n", "z"]);
   }
 
   private dex(opcode: number, addressingMode: "implied") {
@@ -1026,7 +1111,7 @@ export default class CPU {
   }
 
   private cld(opcode: number, addressingMode: "implied") {
-    this.registers.s.d = 1;
+    this.registers.s.d = 0;
   }
 
   private nop(opcode: number, addressingMode: "implied") {
@@ -1056,11 +1141,25 @@ export default class CPU {
       | "absoluteY"
       | "absoluteX"
   ) {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    const operand = this.getOperand(addressingMode);
+    const value =
+      addressingMode === "immediate" ? operand : this.bus.read(operand);
+    const a = this.registers.a.get();
+    const result = a.toNumber() - value.toNumber() - (1 - this.registers.s.c);
+    const bit8Result = new Bit8(result);
+
+    this.updateStatus(bit8Result, ["n", "z"]);
+    this.registers.s.v =
+      a.getNthBit(7) !== value.getNthBit(7) &&
+      a.getNthBit(7) !== bit8Result.getNthBit(7)
+        ? 1
+        : 0;
+    this.registers.s.c = result < 0 ? 0 : 1;
+    this.registers.a.set(bit8Result);
   }
 
   private sed(opcode: number, addressingMode: "implied") {
-    throw new Error("unimplemented instruction" + opcode.toString(16));
+    this.registers.s.d = 1;
   }
 
   private beq(opcode: number, addressingMode: "relative") {
@@ -1148,23 +1247,31 @@ export default class CPU {
         const base = this.fetch().add(this.registers.x.get());
         const lower = this.bus.read(base);
         const upper = this.bus.read(base.inc());
-        const address = Bit16.fromBytes(lower, upper);
-        return this.bus.read(address);
+        return Bit16.fromBytes(lower, upper);
       }
       // アドレス「アドレス「IM8」の16bit値 + Y」の8bit値を
       case "indirectY": {
         const base = this.fetch();
         const lower = this.bus.read(base);
         const upper = this.bus.read(base.inc());
-        const address = Bit16.fromBytes(lower, upper).add(
-          this.registers.y.get()
-        );
-        return this.bus.read(address);
+        return Bit16.fromBytes(lower, upper).add(this.registers.y.get());
       }
       case "indirect": {
-        const address = Bit16.fromBytes(this.fetch(), this.fetch());
-        const lower = this.bus.read(address);
-        const upper = this.bus.read(address.add(1));
+        // const address = Bit16.fromBytes(this.fetch(), this.fetch());
+        const lowerByte = this.fetch();
+        const upperByte = this.fetch();
+        const incrementedLowerByte = new Bit8(
+          (lowerByte.toNumber() + 1) % 0x100
+        );
+        const lower = this.bus.read(Bit16.fromBytes(lowerByte, upperByte));
+        const upper = this.bus.read(
+          Bit16.fromBytes(incrementedLowerByte, upperByte)
+        );
+        console.log(
+          Bit16.fromBytes(lowerByte, incrementedLowerByte).toHexString(),
+          lower.toHexString(),
+          upper.toHexString()
+        );
         return Bit16.fromBytes(lower, upper);
       }
       case "absolute": {

@@ -1,8 +1,9 @@
 import { Bit16, Bit8 } from "./bit";
 
 export class TestLogger {
+  private lineNo = 0;
   private lineLog: string[] = [];
-  private log: string[] = [];
+  private lineOpCodeLog: string[] = [];
 
   push(str: Bit8 | Bit16 | string) {
     if (str instanceof Bit8 || str instanceof Bit16) {
@@ -13,21 +14,27 @@ export class TestLogger {
     this.lineLog.push(str.toUpperCase());
   }
 
-  break() {
-    const lineLogStr = this.lineLog.join(",");
-    this.log.push(lineLogStr);
-    this.lineLog = [];
+  pushOpCode(str: Bit8 | Bit16) {
+    this.lineOpCodeLog.push(str.toHexString().toUpperCase());
   }
 
-  dump() {
-    const expect = NESTEST_EXPECT.split("\n");
-    this.log.forEach((l, i) => {
-      if (l !== expect[i]) {
-        console.log(`test failed!! line${i}`);
-        console.log(`expect: ${expect[i]}`);
-        console.log(`result: ${l}`);
-      }
-    });
+  break() {
+    this.lineLog.splice(1, 0, ...this.lineOpCodeLog);
+    const lineLogStr = this.lineLog.join(",");
+
+    if (lineLogStr !== NESTEST_EXPECT[this.lineNo]) {
+      console.log(
+        `test failed!! line${this.lineNo}\nexpect: ${
+          NESTEST_EXPECT[this.lineNo]
+        }\nresult:  ${lineLogStr}`
+      );
+    } else {
+      console.log(`test pass: ${NESTEST_EXPECT[this.lineNo]}`);
+    }
+
+    this.lineLog = [];
+    this.lineOpCodeLog = [];
+    this.lineNo++;
   }
 }
 
@@ -9022,4 +9029,4 @@ C69D,A9,00,LDA,A:FF,X:FF,Y:15,P:A5,SP:FB
 C69F,8D,07,40,STA,A:00,X:FF,Y:15,P:27,SP:FB
 C6A2,60,RTS,A:00,X:FF,Y:15,P:27,SP:FB
 C66E,60,RTS,A:00,X:FF,Y:15,P:27,SP:FD
-`;
+`.split("\n");

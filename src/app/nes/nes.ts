@@ -59,6 +59,7 @@ export default class NES {
         let count = 0;
         while (count < instructionsPerFrame * 0.92) {
           this.cpu.execute();
+          testLogger.break();
           count++;
         }
 
@@ -74,6 +75,7 @@ export default class NES {
 
         while (count < instructionsPerFrame) {
           this.cpu.execute();
+          testLogger.break();
           count++;
         }
 
@@ -82,7 +84,6 @@ export default class NES {
         clearInterval(cpuId);
         console.error(e);
         console.log(this);
-        testLogger.dump();
       }
     }, 1000 / 60);
   }

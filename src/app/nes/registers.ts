@@ -23,7 +23,6 @@ export class Bit16Register {
     this.value = new Bit16(value.toNumber());
   }
 }
-
 // 7	N	ネガティブ	Aの7ビット目と同じになります。負数の判定用。
 // 6	V	オーバーフロー	演算がオーバーフローを起こした場合セットされます。
 // 5	R	予約済み	使用できません。常にセットされています。
@@ -60,15 +59,7 @@ export class StatusRegister {
   }
 
   get r(): 1 | 0 {
-    return this.value.getNthBit(5);
-  }
-
-  set r(value: 1 | 0) {
-    if (value === 1) {
-      this.value = new Bit8(this.value.toNumber() | 0b00100000);
-    } else {
-      this.value = new Bit8(this.value.toNumber() & 0b11011111);
-    }
+    return 1; //this.value.getNthBit(5);
   }
 
   get b(): 1 | 0 {
@@ -132,10 +123,11 @@ export class StatusRegister {
   }
 
   get(): Bit8 {
-    return this.value;
+    return new Bit8(this.value.toNumber());
   }
 
   set(value: Bit8 | Bit16): void {
-    this.value = new Bit8(value.toNumber());
+    // rは必ずセットされる
+    this.value = new Bit8(value.toNumber() | 0b00100000);
   }
 }
