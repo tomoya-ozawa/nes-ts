@@ -19,10 +19,8 @@ export default class CPU {
     x: new Bit8Register(new Bit8(0)),
     y: new Bit8Register(new Bit8(0)),
     pc: new Bit16Register(new Bit16(0x8000)),
-    // TODO: StackPointerのデフォルト値が0xffで正しいのか未確認
-    // TODO: nestestが終わったら、stackPointerとsのデフォルト値を戻す
-    stackPointer: new Bit8Register(new Bit8(0xfd)),
-    s: new StatusRegister(new Bit8(0x24)),
+    stackPointer: new Bit8Register(new Bit8(0xff)),
+    s: new StatusRegister(new Bit8(0)),
   };
 
   public constructor(private bus: CpuBus, private logger: TestLogger) {}
@@ -31,7 +29,7 @@ export default class CPU {
     const lower = this.bus.read(new Bit16(0xfffc));
     const upper = this.bus.read(new Bit16(0xfffd));
     const counter = Bit16.fromBytes(lower, upper);
-    this.registers.pc.set(new Bit16(0xc000));
+    this.registers.pc.set(counter);
   }
 
   public nmi() {
@@ -65,13 +63,6 @@ export default class CPU {
     this.logger.push(`Y:${this.registers.y.get().toHexString()}`);
     this.logger.push(`P:${this.registers.s.get().toHexString()}`);
     this.logger.push(`SP:${this.registers.stackPointer.get().toHexString()}`);
-
-    // console.log(
-    //   this.registers.pc.get().toHexString(),
-    //   opcode.toHexString(),
-    //   OPCODES[opcode.toNumber()].mnemonics,
-    //   this.bus.read(new Bit16(0x2002)).toNumber()
-    // );
 
     switch (opcode.toNumber()) {
       case 0x00:
