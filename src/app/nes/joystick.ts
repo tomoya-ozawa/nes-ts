@@ -85,6 +85,7 @@ export default class JoyStick {
   private incKeyCounter() {
     if (this.keyCounter === 7) {
       this.keyCounter = 0;
+      return;
     }
     this.keyCounter++;
   }
