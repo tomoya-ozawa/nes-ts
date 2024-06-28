@@ -221,6 +221,18 @@ export default class NES {
       return;
     }
 
+    // OAM DMA ($4014) write
+    if (addressValue === 0x4014) {
+      const oamData = [];
+      const address = Bit16.fromBytes(new Bit8(0), data);
+      for (let i = 0; i < 0xff; i++) {
+        oamData.push(this.readByCPU(address));
+        address.inc();
+      }
+      this.ppu.writeOAMData(oamData);
+      return;
+    }
+
     // $4000–$4017	$0018	NES APU and I/O registers
     if (addressValue >= 0x4000 && addressValue <= 0x4015) {
       this.apu.write(address, data);

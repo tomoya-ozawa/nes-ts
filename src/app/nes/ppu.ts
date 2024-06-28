@@ -52,6 +52,7 @@ type Registers = {
 
 export default class PPU {
   private vram = new RAM();
+  private oam = new RAM();
   private registers: Registers = {
     ppuctrl: {
       vBlankOnNMI: 0,
@@ -177,6 +178,13 @@ export default class PPU {
     }
   }
 
+  // $4014
+  public writeOAMData(data: Bit8[]) {
+    data.forEach((item, index) => {
+      this.oam.set(index, item);
+    });
+  }
+
   // 本来はscanlineの描画後20line分の描画時間をVBlankの時間に充てるべきだが、
   // CPUとの処理のタイミングが上手く噛み合わないため、手動でVBlankをセットする
   public setVBlank(isVBlank: boolean) {
@@ -288,6 +296,8 @@ export default class PPU {
     // this.incrementPPUADDR();
     // return data;
   }
+
+  private OAMDMA(data: Bit8) {}
 
   private incrementPPUADDR() {
     const currentAddress = this.registers.ppuaddr.get();
