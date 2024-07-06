@@ -128,7 +128,12 @@ export default function GL({ children }: Props) {
   };
 
   return (
-    <canvas ref={canvasRef} width="256" height="240">
+    <canvas
+      ref={canvasRef}
+      width="256"
+      height="240"
+      style={{ width: "512px", height: "480px" }}
+    >
       {gl ? children(render) : null}
     </canvas>
   );
