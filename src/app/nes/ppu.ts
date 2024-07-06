@@ -317,7 +317,7 @@ export default class PPU {
   ) {
     const tileId = tile.toNumber();
 
-    for (let y = 0; y < 7; y++) {
+    for (let y = 0; y < 8; y++) {
       const chromAddress = tileId * 16 + (y % 8);
       const byte1 = this.chrom[chromAddress];
       const byte2 = this.chrom[chromAddress + 8];
@@ -348,8 +348,8 @@ export default class PPU {
     const upperTileId = (tile.toNumber() >> 1) * 2;
     const lowerTileId = upperTileId + 1;
 
-    for (let y = 0; y < 15; y++) {
-      const tileId = y < 7 ? upperTileId : lowerTileId;
+    for (let y = 0; y < 16; y++) {
+      const tileId = y < 8 ? upperTileId : lowerTileId;
       const chromAddress = tileId * 16 + tableNum * 0x1000 + (y % 8);
       const byte1 = this.chrom[chromAddress];
       const byte2 = this.chrom[chromAddress + 8];
