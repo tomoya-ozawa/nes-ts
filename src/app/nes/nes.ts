@@ -55,7 +55,7 @@ export default class NES {
     const cpuId = setInterval(() => {
       try {
         // TODO: 20 / 260 = 0.08 の時間をVBlank中の時間として設定。描画や動作がおかしくなるようであれば修正する
-        const instructionsPerFrame = 1000;
+        const instructionsPerFrame = 5000;
         let count = 0;
         while (count < instructionsPerFrame * 0.92) {
           this.cpu.execute();
