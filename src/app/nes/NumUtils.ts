@@ -1,13 +1,12 @@
-Number.prototype.getNthBit = function (position: number): 1 | 0 {
-  const value = ((this as number) >> position) & 1;
-  return value as 1 | 0;
+export const getNthBit = function (value: number, position: number): 1 | 0 {
+  return ((value >> position) & 1) as 1 | 0;
 };
 
-Number.prototype.toHexString = function (): string {
-  return `0x${this.toString(16).padStart(4, "0")}`;
+export const toHexString = (value: number): string => {
+  return `0x${value.toString(16).padStart(4, "0")}`;
 };
 
-Number.prototype.fromBytes = function (
+export const fromBytes = function (
   lowerByte: number,
   upperByte: number
 ): number {
