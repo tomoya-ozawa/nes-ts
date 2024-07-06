@@ -9,6 +9,10 @@ export default class RAM {
     return data ? data : new Bit8();
   }
 
+  getAll(): Bit8[] {
+    return Object.keys(this.ram).map((key) => this.get(Number(key)));
+  }
+
   set(key: number | Bit8 | Bit16, value: Bit8): void {
     const address = Bit16.isBit(key) ? key.toNumber() : key;
     this.ram[address] = value;

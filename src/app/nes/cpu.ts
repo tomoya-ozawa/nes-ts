@@ -1258,11 +1258,6 @@ export default class CPU {
         const upper = this.bus.read(
           Bit16.fromBytes(incrementedLowerByte, upperByte)
         );
-        console.log(
-          Bit16.fromBytes(lowerByte, incrementedLowerByte).toHexString(),
-          lower.toHexString(),
-          upper.toHexString()
-        );
         return Bit16.fromBytes(lower, upper);
       }
       case "absolute": {

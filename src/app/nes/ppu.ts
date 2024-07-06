@@ -38,6 +38,7 @@ type Registers = {
     grayscale: 1 | 0;
   };
   ppustatus: Bit8Register;
+  oamaddr: Bit8Register;
   ppuaddr: Bit16Register;
   ppuscroll: Bit16Register;
   // v: During rendering, used for the scroll position. Outside of rendering, used as the current VRAM address.
@@ -74,6 +75,7 @@ export default class PPU {
       grayscale: 0,
     },
     ppustatus: new Bit8Register(new Bit8(0)),
+    oamaddr: new Bit8Register(new Bit8(0)),
     ppuaddr: new Bit16Register(new Bit16(0)),
     ppuscroll: new Bit16Register(new Bit16(0)),
     v: 0,
@@ -112,31 +114,31 @@ export default class PPU {
           const bit2 = (byte2 >> (7 - bit)) & 1;
           // グレースケールの色値
           const color = (bit1 + (bit2 << 1)) * 85;
-          displayIndex = displayIndex + 4;
           display[displayIndex] = color;
           display[displayIndex + 1] = color;
           display[displayIndex + 2] = color;
           display[displayIndex + 3] = 1;
+          displayIndex = displayIndex + 4;
         }
       }
     }
 
-    // const vblank = new Uint8Array(256 * 20 * 4);
-    // let vblankIndex = 0;
+    // oamのレンダリング
+    const sprites = this.oam.getAll();
+    const renderSprite = this.registers.ppuctrl.isSpriteSize8x16
+      ? this.renderSprite8x16.bind(this)
+      : this.renderSprite8x8.bind(this);
 
-    // for (let y = 0; y < 2000; y++) {
-    //   for (let x = 0; x < 255; x++) {
-    //     vblankIndex = vblankIndex + 4;
-    //     vblank[vblankIndex] = 0;
-    //     vblank[vblankIndex + 1] = 0;
-    //     vblank[vblankIndex + 2] = 0;
-    //     vblank[vblankIndex + 3] = 1;
-    //   }
-    // }
+    for (let i = 0; i < sprites.length; i = i + 4) {
+      const positionY = sprites[i].toNumber();
+      const tile = sprites[i + 1];
+      const attr = sprites[i + 2];
+      const positionX = sprites[i + 3].toNumber();
 
-    // setTimeout(() => {
-    //   this.setPPUSTATUS(true, false, false, false);
-    // }, 250);
+      const renderingStartIndex = (positionY * 256 + positionX) * 4;
+
+      renderSprite(display, tile, attr, renderingStartIndex);
+    }
 
     return display;
   }
@@ -164,6 +166,8 @@ export default class PPU {
       case 0x2003:
         this.setOAMADDR(data);
         break;
+      case 0x2004:
+        this.setOAMDATA(data);
       case 0x2005:
         this.setPPUSCROLL(data);
         break;
@@ -231,7 +235,7 @@ export default class PPU {
   }
 
   private setOAMADDR(data: Bit8) {
-    throw new Error(`implement this`);
+    this.registers.oamaddr.set(data);
   }
 
   private setPPUSCROLL(data: Bit8) {
@@ -284,6 +288,8 @@ export default class PPU {
     this.registers.ppustatus.set(new Bit8(status));
   }
 
+  private setOAMDATA(data: Bit8) {}
+
   private getPPUSTATUS(): Bit8 {
     this.registers.w = 0;
     return this.registers.ppustatus.get();
@@ -297,11 +303,70 @@ export default class PPU {
     // return data;
   }
 
-  private OAMDMA(data: Bit8) {}
-
   private incrementPPUADDR() {
     const currentAddress = this.registers.ppuaddr.get();
     const increment = this.registers.ppuctrl.addressMode === 1 ? 32 : 1;
     this.registers.ppuaddr.set(currentAddress.add(increment));
+  }
+
+  private renderSprite8x8(
+    display: Uint8Array,
+    tile: Bit8,
+    attr: Bit8,
+    renderingStartIndex: number
+  ) {
+    const tileId = tile.toNumber();
+
+    for (let y = 0; y < 7; y++) {
+      const chromAddress = tileId * 16 + (y % 8);
+      const byte1 = this.chrom[chromAddress];
+      const byte2 = this.chrom[chromAddress + 8];
+
+      let displayIndex = renderingStartIndex + y * 256 * 4;
+
+      for (let bit = 0; bit < 8; bit++) {
+        const bit1 = (byte1 >> (7 - bit)) & 1;
+        const bit2 = (byte2 >> (7 - bit)) & 1;
+        // グレースケールの色値
+        const color = (bit1 + (bit2 << 1)) * 85;
+        display[displayIndex] = 255;
+        display[displayIndex + 1] = color;
+        display[displayIndex + 2] = color;
+        display[displayIndex + 3] = 1;
+        displayIndex = displayIndex + 4;
+      }
+    }
+  }
+
+  private renderSprite8x16(
+    display: Uint8Array,
+    tile: Bit8,
+    attr: Bit8,
+    renderingStartIndex: number
+  ) {
+    const tableNum = tile.getNthBit(0);
+    const upperTileId = (tile.toNumber() >> 1) * 2;
+    const lowerTileId = upperTileId + 1;
+
+    for (let y = 0; y < 15; y++) {
+      const tileId = y < 7 ? upperTileId : lowerTileId;
+      const chromAddress = tileId * 16 + tableNum * 0x1000 + (y % 8);
+      const byte1 = this.chrom[chromAddress];
+      const byte2 = this.chrom[chromAddress + 8];
+
+      let displayIndex = renderingStartIndex + y * 256 * 4;
+
+      for (let bit = 0; bit < 8; bit++) {
+        const bit1 = (byte1 >> (7 - bit)) & 1;
+        const bit2 = (byte2 >> (7 - bit)) & 1;
+        // グレースケールの色値
+        const color = (bit1 + (bit2 << 1)) * 85;
+        display[displayIndex] = color;
+        display[displayIndex + 1] = color;
+        display[displayIndex + 2] = color;
+        display[displayIndex + 3] = 1;
+        displayIndex = displayIndex + 4;
+      }
+    }
   }
 }

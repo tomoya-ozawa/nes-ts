@@ -95,7 +95,11 @@ export default class APU {
   public read(cpuAddress: Bit16): Bit8 {
     switch (cpuAddress.toNumber()) {
       default:
-        throw new Error(`invalid address!! ${cpuAddress.toHexString()}`);
+        console.error(
+          `invalid address!! ${cpuAddress.toHexString()}!! implement apu`
+        );
+        return new Bit8(0);
+      // throw new Error(`invalid address!! ${cpuAddress.toHexString()}`);
     }
   }
 

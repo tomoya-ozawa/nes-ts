@@ -225,9 +225,8 @@ export default class NES {
     if (addressValue === 0x4014) {
       const oamData = [];
       const address = Bit16.fromBytes(new Bit8(0), data);
-      for (let i = 0; i < 0xff; i++) {
-        oamData.push(this.readByCPU(address));
-        address.inc();
+      for (let i = 0; i < 0x100; i++) {
+        oamData.push(this.readByCPU(address.add(i)));
       }
       this.ppu.writeOAMData(oamData);
       return;
@@ -251,8 +250,12 @@ export default class NES {
       return;
     }
 
-    throw new Error(
-      `unimplemented memory map writeByCPU: ${address.toHexString()}`
-    );
+    // console.error(
+    //   `unimplemented memory map writeByCPU: ${address.toHexString()}`
+    // );
+
+    // throw new Error(
+    //   `unimplemented memory map writeByCPU: ${address.toHexString()}`
+    // );
   }
 }
