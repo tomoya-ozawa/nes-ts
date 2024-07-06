@@ -161,7 +161,7 @@ export default class NES {
     // $2000–$2007	$0008	NES PPU registers
     // $2008–$3FFF	$1FF8	Mirrors of $2000–$2007 (repeats every 8 bytes)
     if (addressValue >= 0x2000 && addressValue <= 0x3fff) {
-      return this.ppu.read(new Bit16(0x2000 + (addressValue % 8)));
+      return this.ppu.readFromCPU(new Bit16(0x2000 + (addressValue % 8)));
     }
 
     // $4000–$4017	$0018	NES APU and I/O registers
@@ -217,7 +217,7 @@ export default class NES {
     // $2008–$3FFF	$1FF8	Mirrors of $2000–$2007 (repeats every 8 bytes)
     if (addressValue >= 0x2000 && addressValue <= 0x3fff) {
       const mod = addressValue % 8;
-      this.ppu.write(new Bit16(0x2000 + mod), data);
+      this.ppu.writeFromCPU(new Bit16(0x2000 + mod), data);
       return;
     }
 

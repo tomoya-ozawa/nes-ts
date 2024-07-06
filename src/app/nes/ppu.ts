@@ -102,12 +102,13 @@ export default class PPU {
       for (let x = 0; x < 255; x = x + 8) {
         // xとyから、対応するネームテーブルのindexを割り出す
         const nameIndex = (y >> 3) * 32 + (x >> 3) + 0x2000;
-        const target = this.vram.get(nameIndex).toNumber();
+        const target = this.readPPU(new Bit16(nameIndex)).toNumber();
+        // const target = this.vram.get(nameIndex).toNumber();
 
         // スプライトの描画
         const chromAddress = target * 16 + (y % 8);
-        const byte1 = this.chrom[chromAddress];
-        const byte2 = this.chrom[chromAddress + 8];
+        const byte1 = this.readPPU(new Bit16(chromAddress)).toNumber();
+        const byte2 = this.readPPU(new Bit16(chromAddress + 8)).toNumber();
 
         for (let bit = 0; bit < 8; bit++) {
           const bit1 = (byte1 >> (7 - bit)) & 1;
@@ -143,7 +144,7 @@ export default class PPU {
     return display;
   }
 
-  public read(cpuAddress: Bit16): Bit8 {
+  public readFromCPU(cpuAddress: Bit16): Bit8 {
     switch (cpuAddress.toNumber()) {
       case 0x2002:
         return this.getPPUSTATUS();
@@ -155,7 +156,7 @@ export default class PPU {
     }
   }
 
-  public write(cpuAddress: Bit16, data: Bit8) {
+  public writeFromCPU(cpuAddress: Bit16, data: Bit8) {
     switch (cpuAddress.toNumber()) {
       case 0x2000:
         this.setPPUCTRL(data);
@@ -199,6 +200,33 @@ export default class PPU {
   // NES classがフラグを取得できるようにする
   public shouldNMIOnVBlank(): boolean {
     return !!this.registers.ppuctrl.vBlankOnNMI;
+  }
+
+  private readPPU(ppuAddress: Bit16): Bit8 {
+    const addressValue = ppuAddress.toNumber();
+    // $0000-$0FFF	$1000	Pattern table 0	Cartridge
+    // $1000-$1FFF	$1000	Pattern table 1	Cartridge
+    // $3000-$3EFF	$0F00	Unused	Cartridge
+    if (addressValue <= 0x1fff) {
+      return new Bit8(this.chrom[addressValue]);
+    }
+
+    // $2000-$23BF	$0400	Nametable 0	Cartridge
+    // $2400-$27FF	$0400	Nametable 1	Cartridge
+    // $2800-$2BFF	$0400	Nametable 2	Cartridge
+    // $2C00-$2FFF	$0400	Nametable 3	Cartridge
+    if (addressValue >= 0x2000 && addressValue <= 0x2fff) {
+      return this.vram.get(ppuAddress);
+    }
+
+    // $3F00-$3F1F	$0020	Palette RAM indexes	Internal to PPU
+    // $3F20-$3FFF	$00E0	Mirrors of $3F00-$3F1F	Internal to PPU
+    if (addressValue >= 0x3f00 && addressValue <= 0x3fff) {
+      const mod = addressValue % 0x20;
+      return this.vram.get(new Bit16(0x3f00).add(mod));
+    }
+
+    throw new Error(`invalid ppu address ${ppuAddress.toHexString()}`);
   }
 
   private setPPUCTRL(data: Bit8) {
@@ -320,8 +348,8 @@ export default class PPU {
 
     for (let y = 0; y < 8; y++) {
       const chromAddress = tileId * 16 + tableNum + (y % 8);
-      const byte1 = this.chrom[chromAddress];
-      const byte2 = this.chrom[chromAddress + 8];
+      const byte1 = this.readPPU(new Bit16(chromAddress)).toNumber();
+      const byte2 = this.readPPU(new Bit16(chromAddress + 8)).toNumber();
 
       let displayIndex = renderingStartIndex + y * 256 * 4;
 
@@ -348,12 +376,13 @@ export default class PPU {
     const tableNum = tile.getNthBit(0);
     const upperTileId = (tile.toNumber() >> 1) * 2;
     const lowerTileId = upperTileId + 1;
+    const palette = (attr.getNthBit(1) >> 1) | attr.getNthBit(0);
 
     for (let y = 0; y < 16; y++) {
       const tileId = y < 8 ? upperTileId : lowerTileId;
       const chromAddress = tileId * 16 + tableNum * 0x1000 + (y % 8);
-      const byte1 = this.chrom[chromAddress];
-      const byte2 = this.chrom[chromAddress + 8];
+      const byte1 = this.readPPU(new Bit16(chromAddress)).toNumber();
+      const byte2 = this.readPPU(new Bit16(chromAddress + 8)).toNumber();
 
       let displayIndex = renderingStartIndex + y * 256 * 4;
 
