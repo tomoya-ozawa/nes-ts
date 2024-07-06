@@ -316,9 +316,10 @@ export default class PPU {
     renderingStartIndex: number
   ) {
     const tileId = tile.toNumber();
+    const tableNum = this.registers.ppuctrl.spriteChrTable ? 0x1000 : 0x0000;
 
     for (let y = 0; y < 8; y++) {
-      const chromAddress = tileId * 16 + (y % 8);
+      const chromAddress = tileId * 16 + tableNum + (y % 8);
       const byte1 = this.chrom[chromAddress];
       const byte2 = this.chrom[chromAddress + 8];
 
@@ -329,7 +330,7 @@ export default class PPU {
         const bit2 = (byte2 >> (7 - bit)) & 1;
         // グレースケールの色値
         const color = (bit1 + (bit2 << 1)) * 85;
-        display[displayIndex] = 255;
+        display[displayIndex] = color;
         display[displayIndex + 1] = color;
         display[displayIndex + 2] = color;
         display[displayIndex + 3] = 1;
