@@ -18,9 +18,9 @@ export default class CPU {
     a: new Bit8Register(0),
     x: new Bit8Register(0),
     y: new Bit8Register(0),
-    pc: new Bit16Register(0xc000),
-    stackPointer: new Bit8Register(0xfd),
-    s: new StatusRegister(0x24),
+    pc: new Bit16Register(0x0000),
+    stackPointer: new Bit8Register(0xff),
+    s: new StatusRegister(0),
   };
 
   public constructor(private bus: CpuBus, private logger: TestLogger) {}

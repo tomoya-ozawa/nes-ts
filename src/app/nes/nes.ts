@@ -50,7 +50,7 @@ export default class NES {
   }
 
   public start() {
-    // this.cpu.reset();
+    this.cpu.reset();
 
     const cpuId = setInterval(() => {
       try {
@@ -63,15 +63,15 @@ export default class NES {
           count++;
         }
 
-        // this.display = this.ppu.render();
+        this.display = this.ppu.render();
 
         this.emitChange();
 
         this.ppu.setVBlank(true);
 
-        // if (this.ppu.shouldNMIOnVBlank()) {
-        //   this.cpu.nmi();
-        // }
+        if (this.ppu.shouldNMIOnVBlank()) {
+          this.cpu.nmi();
+        }
 
         while (count < instructionsPerFrame) {
           this.cpu.execute();

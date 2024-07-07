@@ -20,16 +20,16 @@ export class TestLogger {
     this.lineLog.splice(1, 0, ...this.lineOpCodeLog);
     const lineLogStr = this.lineLog.join(",");
 
-    if (lineLogStr !== NESTEST_EXPECT[this.lineNo]) {
-      console.log(
-        `test failed!! line${this.lineNo}\nexpect: ${
-          NESTEST_EXPECT[this.lineNo]
-        }\nresult:  ${lineLogStr}`
-      );
-      throw new Error("x");
-    } else {
-      console.log(`test pass: ${NESTEST_EXPECT[this.lineNo]}`);
-    }
+    // if (lineLogStr !== NESTEST_EXPECT[this.lineNo]) {
+    //   console.log(
+    //     `test failed!! line${this.lineNo}\nexpect: ${
+    //       NESTEST_EXPECT[this.lineNo]
+    //     }\nresult:  ${lineLogStr}`
+    //   );
+    //   throw new Error("x");
+    // } else {
+    //   console.log(`test pass: ${NESTEST_EXPECT[this.lineNo]}`);
+    // }
 
     // console.log(lineLogStr);
     this.lineLog = [];
