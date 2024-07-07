@@ -1,7 +1,5 @@
-import { Bit16, Bit8 } from "./bit";
-
 export type Mapper = {
-  read: (address: Bit8 | Bit16) => Bit8;
+  read: (address: number) => number;
 };
 
 export const getMappers = (pgRomSize: number) => {
@@ -22,16 +20,16 @@ export const getMappers = (pgRomSize: number) => {
 class NROMMapper128 {
   public constructor(private pgrom: Uint8Array, pgRomSize: number) {}
 
-  public read(address: Bit8 | Bit16) {
-    const fixedAddress = address.subtract(0x8000).toNumber() % 0x4000;
-    return new Bit8(this.pgrom[fixedAddress]);
+  public read(address: number) {
+    const fixedAddress = (address - 0x8000) % 0x4000;
+    return this.pgrom[fixedAddress];
   }
 }
 
 class NROMMapper256 {
   public constructor(private pgrom: Uint8Array, pgRomSize: number) {}
 
-  public read(address: Bit8 | Bit16) {
-    return new Bit8(this.pgrom[address.subtract(0x8000).toNumber()]);
+  public read(address: number) {
+    return this.pgrom[address - 0x8000];
   }
 }

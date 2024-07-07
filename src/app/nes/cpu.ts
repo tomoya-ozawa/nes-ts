@@ -1,8 +1,8 @@
 import { TestLogger } from "./TestLogger";
-import { Bit8, Bit16 } from "./bit";
 import { CpuBus } from "./nes";
 import OPCODES, { Opcode } from "./opcodes";
 import { Bit16Register, Bit8Register, StatusRegister } from "./registers";
+import NumUtils from "./NumUtils";
 
 type Registers = {
   a: Bit8Register;
@@ -15,56 +15,70 @@ type Registers = {
 
 export default class CPU {
   registers: Registers = {
-    a: new Bit8Register(new Bit8(0)),
-    x: new Bit8Register(new Bit8(0)),
-    y: new Bit8Register(new Bit8(0)),
-    pc: new Bit16Register(new Bit16(0x8000)),
-    stackPointer: new Bit8Register(new Bit8(0xff)),
-    s: new StatusRegister(new Bit8(0)),
+    a: new Bit8Register(0),
+    x: new Bit8Register(0),
+    y: new Bit8Register(0),
+    pc: new Bit16Register(0xc000),
+    stackPointer: new Bit8Register(0xfd),
+    s: new StatusRegister(0x24),
   };
 
   public constructor(private bus: CpuBus, private logger: TestLogger) {}
 
   public reset() {
-    const lower = this.bus.read(new Bit16(0xfffc));
-    const upper = this.bus.read(new Bit16(0xfffd));
-    const counter = Bit16.fromBytes(lower, upper);
+    const lower = this.bus.read(0xfffc);
+    const upper = this.bus.read(0xfffd);
+    const counter = NumUtils.fromBytes(lower, upper);
     this.registers.pc.set(counter);
   }
 
   public nmi() {
     const returnAddress = this.registers.pc.get();
-    const returnAddressUpper = new Bit8(returnAddress.toNumber() >> 8);
-    const returnAddressLower = new Bit8(returnAddress.toNumber() & 0xff);
+    const returnAddressUpper = returnAddress >> 8;
+    const returnAddressLower = returnAddress & 0xff;
 
     this.pushToStack(returnAddressUpper);
     this.pushToStack(returnAddressLower);
     this.pushToStack(this.registers.s.get());
 
-    const lower = this.bus.read(new Bit16(0xfffa));
-    const upper = this.bus.read(new Bit16(0xfffb));
-    const counter = Bit16.fromBytes(lower, upper);
+    const lower = this.bus.read(0xfffa);
+    const upper = this.bus.read(0xfffb);
+    const counter = NumUtils.fromBytes(lower, upper);
     this.registers.pc.set(counter);
   }
 
-  public fetch(): Bit8 {
+  public fetch(): number {
     const op = this.bus.read(this.registers.pc.get());
     this.logger.pushOpCode(op);
-    this.registers.pc.set(this.registers.pc.get().inc());
+    this.registers.pc.set(this.registers.pc.get() + 1);
     return op;
   }
 
   public execute() {
     this.logger.push(this.registers.pc.get());
     const opcode = this.fetch();
-    this.logger.push(OPCODES[opcode.toNumber()].mnemonics[0]);
-    this.logger.push(`A:${this.registers.a.get().toHexString()}`);
-    this.logger.push(`X:${this.registers.x.get().toHexString()}`);
-    this.logger.push(`Y:${this.registers.y.get().toHexString()}`);
-    this.logger.push(`P:${this.registers.s.get().toHexString()}`);
-    this.logger.push(`SP:${this.registers.stackPointer.get().toHexString()}`);
+    this.logger.push(OPCODES[opcode].mnemonics[0]);
+    this.logger.push(
+      `A:${this.registers.a.get().toString(16).padStart(2, "0").toUpperCase()}`
+    );
+    this.logger.push(
+      `X:${this.registers.x.get().toString(16).padStart(2, "0").toUpperCase()}`
+    );
+    this.logger.push(
+      `Y:${this.registers.y.get().toString(16).padStart(2, "0").toUpperCase()}`
+    );
+    this.logger.push(
+      `P:${this.registers.s.get().toString(16).padStart(2, "0").toUpperCase()}`
+    );
+    this.logger.push(
+      `SP:${this.registers.stackPointer
+        .get()
+        .toString(16)
+        .padStart(2, "0")
+        .toUpperCase()}`
+    );
 
-    switch (opcode.toNumber()) {
+    switch (opcode) {
       case 0x00:
         return this.brk(0x0, "implied");
       case 0x01:
@@ -555,9 +569,9 @@ export default class CPU {
         return this.illegal(0xff);
       default:
         throw new Error(
-          `invalid opcode! ${opcode.toHexString()} , ${this.registers.pc
-            .get()
-            .toHexString()}`
+          `invalid opcode! ${NumUtils.toHexString(
+            opcode
+          )} , ${NumUtils.toHexString(this.registers.pc.get())}`
         );
     }
   }
@@ -587,9 +601,8 @@ export default class CPU {
     const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "immediate" ? operand : this.bus.read(operand);
-    const result = new Bit8(
-      this.registers.a.get().toNumber() | value.toNumber()
-    );
+    const result = this.registers.a.get() | value;
+
     this.registers.a.set(result);
 
     this.updateStatus(result, ["n", "z"]);
@@ -607,8 +620,8 @@ export default class CPU {
     const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "accumulator" ? operand : this.bus.read(operand);
-    const result = value.toNumber() << 1;
-    const bitValue = new Bit8(result);
+    const result = value << 1;
+    const bitValue = NumUtils.to8Bit(result);
 
     if (addressingMode === "accumulator") {
       this.registers.a.set(bitValue);
@@ -642,9 +655,9 @@ export default class CPU {
     const address = this.getOperand(addressingMode);
 
     // 次の命令のアドレス - 1の2byte分をstackにpushする
-    const returnAddress = this.registers.pc.get().dec();
-    const returnAddressUpper = new Bit8(returnAddress.toNumber() >> 8);
-    const returnAddressLower = new Bit8(returnAddress.toNumber() & 0xff);
+    const returnAddress = this.registers.pc.get() - 1;
+    const returnAddressUpper = returnAddress >> 8;
+    const returnAddressLower = returnAddress & 0xff;
 
     this.pushToStack(returnAddressUpper);
     this.pushToStack(returnAddressLower);
@@ -666,9 +679,7 @@ export default class CPU {
     const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "immediate" ? operand : this.bus.read(operand);
-    const result = new Bit8(
-      this.registers.a.get().toNumber() & value.toNumber()
-    );
+    const result = this.registers.a.get() & value;
     this.registers.a.set(result);
 
     this.updateStatus(result, ["n", "z"]);
@@ -681,10 +692,10 @@ export default class CPU {
   // any of the registers, other than the status register (SR).
   private bit(opcode: number, addressingMode: "zeropage" | "absolute") {
     const value = this.bus.read(this.getOperand(addressingMode));
-    const andResult = this.registers.a.get().toNumber() & value.toNumber();
+    const andResult = this.registers.a.get() & value;
 
-    this.registers.s.n = value.getNthBit(7);
-    this.registers.s.v = value.getNthBit(6);
+    this.registers.s.n = NumUtils.getNthBit(value, 7);
+    this.registers.s.v = NumUtils.getNthBit(value, 6);
     this.registers.s.z = andResult === 0 ? 1 : 0;
   }
 
@@ -701,8 +712,8 @@ export default class CPU {
     const value =
       addressingMode === "accumulator" ? operand : this.bus.read(operand);
     const carry = this.registers.s.c === 1 ? 0b00000001 : 0b00000000;
-    const result = (value.toNumber() << 1) | carry;
-    const bit8Result = new Bit8(result);
+    const result = (value << 1) | carry;
+    const bit8Result = NumUtils.to8Bit(result);
 
     if (addressingMode === "accumulator") {
       this.registers.a.set(bit8Result);
@@ -711,7 +722,7 @@ export default class CPU {
     }
 
     this.updateStatus(bit8Result, ["n", "z"]);
-    this.registers.s.c = value.getNthBit(7);
+    this.registers.s.c = NumUtils.getNthBit(value, 7);
   }
 
   // The status register will be pulled with the break flag and bit 5 ignored.
@@ -735,7 +746,7 @@ export default class CPU {
     const statusFlags = this.popToStack();
     const returnAddressLower = this.popToStack();
     const returnAddressUpper = this.popToStack();
-    const counter = Bit16.fromBytes(returnAddressLower, returnAddressUpper);
+    const counter = NumUtils.fromBytes(returnAddressLower, returnAddressUpper);
     this.registers.pc.set(counter);
     this.registers.s.set(statusFlags);
   }
@@ -756,9 +767,7 @@ export default class CPU {
     const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "immediate" ? operand : this.bus.read(operand);
-    const result = new Bit8(
-      this.registers.a.get().toNumber() ^ value.toNumber()
-    );
+    const result = this.registers.a.get() ^ value;
     this.registers.a.set(result);
 
     this.updateStatus(result, ["n", "z"]);
@@ -776,8 +785,8 @@ export default class CPU {
     const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "accumulator" ? operand : this.bus.read(operand);
-    const result = value.toNumber() >> 1;
-    const bitValue = new Bit8(result);
+    const result = value >> 1;
+    const bitValue = NumUtils.to8Bit(result);
 
     if (addressingMode === "accumulator") {
       this.registers.a.set(bitValue);
@@ -808,10 +817,8 @@ export default class CPU {
     // // 戻りアドレスを pop し、そのアドレスに 1 を加えたアドレスへジャンプ
     const returnAddressLower = this.popToStack();
     const returnAddressUpper = this.popToStack();
-    const returnAddress = Bit16.fromBytes(
-      returnAddressLower,
-      returnAddressUpper
-    ).inc();
+    const returnAddress =
+      NumUtils.fromBytes(returnAddressLower, returnAddressUpper) + 1;
 
     this.registers.pc.set(returnAddress);
   }
@@ -836,13 +843,13 @@ export default class CPU {
     const value =
       addressingMode === "immediate" ? operand : this.bus.read(operand);
     const a = this.registers.a.get();
-    const result = a.toNumber() + value.toNumber() + this.registers.s.c;
-    const bit8Result = new Bit8(result);
+    const result = a + value + this.registers.s.c;
+    const bit8Result = NumUtils.to8Bit(result);
 
     this.updateStatus(bit8Result, ["n", "z"]);
     this.registers.s.v =
-      a.getNthBit(7) === value.getNthBit(7) &&
-      a.getNthBit(7) !== bit8Result.getNthBit(7)
+      NumUtils.getNthBit(a, 7) === NumUtils.getNthBit(value, 7) &&
+      NumUtils.getNthBit(a, 7) !== NumUtils.getNthBit(bit8Result, 7)
         ? 1
         : 0;
     this.registers.s.c = result > 0xff ? 1 : 0;
@@ -864,8 +871,8 @@ export default class CPU {
     const value =
       addressingMode === "accumulator" ? operand : this.bus.read(operand);
     const carry = this.registers.s.c === 1 ? 0b10000000 : 0b00000000;
-    const result = carry | (value.toNumber() >> 1);
-    const bit8Result = new Bit8(result);
+    const result = carry | (value >> 1);
+    const bit8Result = NumUtils.to8Bit(result);
 
     if (addressingMode === "accumulator") {
       this.registers.a.set(bit8Result);
@@ -874,7 +881,7 @@ export default class CPU {
     }
 
     this.updateStatus(bit8Result, ["n", "z"]);
-    this.registers.s.c = value.getNthBit(0);
+    this.registers.s.c = NumUtils.getNthBit(value, 0);
   }
 
   private pla(opcode: number, addressingMode: "implied") {
@@ -1029,11 +1036,11 @@ export default class CPU {
     const value =
       addressingMode === "immediate" ? operand : this.bus.read(operand);
     const x = this.registers.x.get();
-    const result = x.subtract(value);
+    const result = x - value;
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.s.c = x.toNumber() >= value.toNumber() ? 1 : 0;
+    this.registers.s.c = x >= value ? 1 : 0;
   }
 
   private cpy(
@@ -1044,11 +1051,11 @@ export default class CPU {
     const value =
       addressingMode === "immediate" ? operand : this.bus.read(operand);
     const y = this.registers.y.get();
-    const result = y.subtract(value);
+    const result = y - value;
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.s.c = y.toNumber() >= value.toNumber() ? 1 : 0;
+    this.registers.s.c = y >= value ? 1 : 0;
   }
 
   private cmp(
@@ -1067,11 +1074,11 @@ export default class CPU {
     const value =
       addressingMode === "immediate" ? operand : this.bus.read(operand);
     const a = this.registers.a.get();
-    const result = a.subtract(value);
+    const result = a - value;
 
     this.updateStatus(result, ["n", "z"]);
     // 比較演算の場合は、比較対象より大きい場合はキャリーフラグを立てる
-    this.registers.s.c = a.toNumber() >= value.toNumber() ? 1 : 0;
+    this.registers.s.c = a >= value ? 1 : 0;
   }
 
   private dec(
@@ -1086,7 +1093,7 @@ export default class CPU {
     const operand = this.getOperand(addressingMode);
     const value =
       addressingMode === "immediate" ? operand : this.bus.read(operand);
-    const result = value.dec();
+    const result = NumUtils.to8Bit(value - 1);
 
     if (addressingMode !== "immediate") {
       this.bus.write(operand, result);
@@ -1096,7 +1103,7 @@ export default class CPU {
   }
 
   private dex(opcode: number, addressingMode: "implied") {
-    const value = this.registers.x.get().dec();
+    const value = NumUtils.to8Bit(this.registers.x.get() - 1);
     this.registers.x.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
@@ -1114,7 +1121,7 @@ export default class CPU {
     addressingMode: "zeropage" | "zeropageX" | "absolute" | "absoluteX"
   ) {
     const operand = this.getOperand(addressingMode);
-    const value = this.bus.read(operand).inc();
+    const value = NumUtils.to8Bit(this.bus.read(operand) + 1);
     this.bus.write(operand, value);
     this.updateStatus(value, ["n", "z"]);
   }
@@ -1136,13 +1143,13 @@ export default class CPU {
     const value =
       addressingMode === "immediate" ? operand : this.bus.read(operand);
     const a = this.registers.a.get();
-    const result = a.toNumber() - value.toNumber() - (1 - this.registers.s.c);
-    const bit8Result = new Bit8(result);
+    const result = a - value - (1 - this.registers.s.c);
+    const bit8Result = NumUtils.to8Bit(result);
 
     this.updateStatus(bit8Result, ["n", "z"]);
     this.registers.s.v =
-      a.getNthBit(7) !== value.getNthBit(7) &&
-      a.getNthBit(7) !== bit8Result.getNthBit(7)
+      NumUtils.getNthBit(a, 7) !== NumUtils.getNthBit(value, 7) &&
+      NumUtils.getNthBit(a, 7) !== NumUtils.getNthBit(bit8Result, 7)
         ? 1
         : 0;
     this.registers.s.c = result < 0 ? 0 : 1;
@@ -1161,19 +1168,19 @@ export default class CPU {
   }
 
   private inx(opcode: number, addressingMode: "implied") {
-    const value = this.registers.x.get().inc();
+    const value = NumUtils.to8Bit(this.registers.x.get() + 1);
     this.registers.x.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
 
   private iny(opcode: number, addressingMode: "implied") {
-    const value = this.registers.y.get().inc();
+    const value = NumUtils.to8Bit(this.registers.y.get() + 1);
     this.registers.y.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
 
   private dey(opcode: number, addressingMode: "implied") {
-    const value = this.registers.y.get().dec();
+    const value = NumUtils.to8Bit(this.registers.y.get() - 1);
     this.registers.y.set(value);
     this.updateStatus(value, ["n", "z"]);
   }
@@ -1185,28 +1192,28 @@ export default class CPU {
     }
   }
 
-  private updateStatus(value: Bit8, updateFlags: Array<"n" | "z" | "c">) {
+  private updateStatus(value: number, updateFlags: Array<"n" | "z" | "c">) {
     if (updateFlags.includes("n")) {
-      this.registers.s.n = value.isMostSignificantBitSet() ? 1 : 0;
+      this.registers.s.n = NumUtils.getNthBit(value, 7);
     }
     if (updateFlags.includes("z")) {
-      this.registers.s.z = value.toNumber() === 0 ? 1 : 0;
+      this.registers.s.z = value === 0 ? 1 : 0;
     }
   }
 
-  private pushToStack(data: Bit8) {
-    const stackAddress = new Bit16(
-      this.registers.stackPointer.get().toNumber()
-    ).add(0x0100);
+  private pushToStack(data: number) {
+    const stackAddress = NumUtils.to16Bit(
+      this.registers.stackPointer.get() + 0x0100
+    );
     this.bus.write(stackAddress, data);
-    this.registers.stackPointer.set(this.registers.stackPointer.get().dec());
+    this.registers.stackPointer.set(this.registers.stackPointer.get() - 1);
   }
 
   private popToStack() {
-    this.registers.stackPointer.set(this.registers.stackPointer.get().inc());
-    const stackAddress = new Bit16(
-      this.registers.stackPointer.get().toNumber()
-    ).add(0x0100);
+    this.registers.stackPointer.set(this.registers.stackPointer.get() + 1);
+    const stackAddress = NumUtils.to16Bit(
+      this.registers.stackPointer.get() + 0x0100
+    );
     return this.bus.read(stackAddress);
   }
 
@@ -1218,7 +1225,7 @@ export default class CPU {
   // (d),y	Indirect indexed	val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)	5+
   private getOperand(
     mode: Exclude<Opcode["addressingMode"], "implied">
-  ): Bit8 | Bit16 {
+  ): number {
     switch (mode) {
       case "immediate":
       case "zeropage":
@@ -1226,50 +1233,54 @@ export default class CPU {
       case "accumulator":
         return this.registers.a.get();
       case "relative": {
-        const operand = this.fetch().getSignedInt();
-        return this.registers.pc.get().add(operand);
+        const operand = this.fetch();
+        const isNegative = NumUtils.getNthBit(operand, 7);
+        const value = isNegative ? operand - 0xff - 1 : operand;
+        return this.registers.pc.get() + value;
       }
       case "zeropageX":
-        return this.fetch().add(this.registers.x.get());
+        return NumUtils.to8Bit(this.fetch() + this.registers.x.get());
       case "zeropageY":
-        return this.fetch().add(this.registers.y.get());
+        return NumUtils.to8Bit(this.fetch() + this.registers.y.get());
       //アドレス「アドレス「IM8 + X」の16bit値」の8bit値
       case "indirectX": {
-        const base = this.fetch().add(this.registers.x.get());
+        const base = NumUtils.to8Bit(this.fetch() + this.registers.x.get());
         const lower = this.bus.read(base);
-        const upper = this.bus.read(base.inc());
-        return Bit16.fromBytes(lower, upper);
+        const upper = this.bus.read(NumUtils.to8Bit(base + 1));
+        return NumUtils.fromBytes(lower, upper);
       }
       // アドレス「アドレス「IM8」の16bit値 + Y」の8bit値を
       case "indirectY": {
         const base = this.fetch();
         const lower = this.bus.read(base);
-        const upper = this.bus.read(base.inc());
-        return Bit16.fromBytes(lower, upper).add(this.registers.y.get());
+        const upper = this.bus.read(NumUtils.to8Bit(base + 1));
+
+        return NumUtils.to16Bit(
+          NumUtils.fromBytes(lower, upper) + this.registers.y.get()
+        );
       }
       case "indirect": {
-        // const address = Bit16.fromBytes(this.fetch(), this.fetch());
         const lowerByte = this.fetch();
         const upperByte = this.fetch();
-        const incrementedLowerByte = new Bit8(
-          (lowerByte.toNumber() + 1) % 0x100
-        );
-        const lower = this.bus.read(Bit16.fromBytes(lowerByte, upperByte));
+        const incrementedLowerByte = NumUtils.to8Bit((lowerByte + 1) % 0x100);
+        const lower = this.bus.read(NumUtils.fromBytes(lowerByte, upperByte));
         const upper = this.bus.read(
-          Bit16.fromBytes(incrementedLowerByte, upperByte)
+          NumUtils.fromBytes(incrementedLowerByte, upperByte)
         );
-        return Bit16.fromBytes(lower, upper);
+        return NumUtils.fromBytes(lower, upper);
       }
       case "absolute": {
-        return Bit16.fromBytes(this.fetch(), this.fetch());
+        return NumUtils.fromBytes(this.fetch(), this.fetch());
       }
       case "absoluteX":
-        return Bit16.fromBytes(this.fetch(), this.fetch()).add(
-          this.registers.x.get()
+        return NumUtils.to16Bit(
+          NumUtils.fromBytes(this.fetch(), this.fetch()) +
+            this.registers.x.get()
         );
       case "absoluteY":
-        return Bit16.fromBytes(this.fetch(), this.fetch()).add(
-          this.registers.y.get()
+        return NumUtils.to16Bit(
+          NumUtils.fromBytes(this.fetch(), this.fetch()) +
+            this.registers.y.get()
         );
     }
   }

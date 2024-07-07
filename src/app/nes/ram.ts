@@ -1,20 +1,22 @@
-import { Bit16, Bit8 } from "./bit";
+import NumUtils from "./NumUtils";
 
 export default class RAM {
-  ram: { [key: number]: Bit8 | undefined } = {};
+  ram: { [key: number]: number | undefined } = {};
 
-  get(key: number | Bit8 | Bit16): Bit8 {
-    const address = Bit16.isBit(key) ? key.toNumber() : key;
-    const data = this.ram[address];
-    return data ? data : new Bit8();
+  get(key: number): number {
+    const data = this.ram[key];
+    return data ? data : 0;
   }
 
-  getAll(): Bit8[] {
+  getAll(): number[] {
     return Object.keys(this.ram).map((key) => this.get(Number(key)));
   }
 
-  set(key: number | Bit8 | Bit16, value: Bit8): void {
-    const address = Bit16.isBit(key) ? key.toNumber() : key;
-    this.ram[address] = value;
+  set(key: number, value: number): void {
+    if (value < 0x00 || value > 0xff) {
+      throw new Error(`invalid value: ${NumUtils.toHexString(value)}`);
+    }
+
+    this.ram[key] = value;
   }
 }

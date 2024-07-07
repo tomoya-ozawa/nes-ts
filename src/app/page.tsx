@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import NESComponent from "./NESComponent";
 import GL from "./GL";
 import NESROMSelect from "./NESROMSelect";
-import "./number-extend";
 
 // TODO: 微妙にGLとNESComponentがわかりづらいので修正する
 // 例えば、

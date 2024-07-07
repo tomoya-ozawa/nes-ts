@@ -1,4 +1,4 @@
-import { Bit16, Bit8 } from "./bit";
+import NumUtils from "./NumUtils";
 import RAM from "./ram";
 import { Bit16Register, Bit8Register } from "./registers";
 
@@ -74,10 +74,10 @@ export default class PPU {
       showBGInLeftmost8PixelsOfScreen: 0,
       grayscale: 0,
     },
-    ppustatus: new Bit8Register(new Bit8(0)),
-    oamaddr: new Bit8Register(new Bit8(0)),
-    ppuaddr: new Bit16Register(new Bit16(0)),
-    ppuscroll: new Bit16Register(new Bit16(0)),
+    ppustatus: new Bit8Register(0),
+    oamaddr: new Bit8Register(0),
+    ppuaddr: new Bit16Register(0),
+    ppuscroll: new Bit16Register(0),
     v: 0,
     t: 0,
     x: 0,
@@ -102,13 +102,13 @@ export default class PPU {
       for (let x = 0; x < 255; x = x + 8) {
         // xとyから、対応するネームテーブルのindexを割り出す
         const nameIndex = (y >> 3) * 32 + (x >> 3) + 0x2000;
-        const target = this.readPPU(new Bit16(nameIndex)).toNumber();
+        const target = this.readPPU(nameIndex);
         // const target = this.vram.get(nameIndex).toNumber();
 
         // スプライトの描画
         const chromAddress = target * 16 + (y % 8);
-        const byte1 = this.readPPU(new Bit16(chromAddress)).toNumber();
-        const byte2 = this.readPPU(new Bit16(chromAddress + 8)).toNumber();
+        const byte1 = this.readPPU(chromAddress);
+        const byte2 = this.readPPU(chromAddress + 8);
 
         for (let bit = 0; bit < 8; bit++) {
           const bit1 = (byte1 >> (7 - bit)) & 1;
@@ -131,10 +131,10 @@ export default class PPU {
       : this.renderSprite8x8.bind(this);
 
     for (let i = 0; i < sprites.length; i = i + 4) {
-      const positionY = sprites[i].toNumber();
+      const positionY = sprites[i];
       const tile = sprites[i + 1];
       const attr = sprites[i + 2];
-      const positionX = sprites[i + 3].toNumber();
+      const positionX = sprites[i + 3];
 
       const renderingStartIndex = (positionY * 256 + positionX) * 4;
 
@@ -144,20 +144,22 @@ export default class PPU {
     return display;
   }
 
-  public readFromCPU(cpuAddress: Bit16): Bit8 {
-    switch (cpuAddress.toNumber()) {
+  public readFromCPU(cpuAddress: number): number {
+    switch (cpuAddress) {
       case 0x2002:
         return this.getPPUSTATUS();
       case 0x2007:
         throw new Error("IMPLEMENT 0x2007");
       // return this.getPPUDATA();
       default:
-        throw new Error(`invalid address!! ${cpuAddress.toHexString()}`);
+        throw new Error(
+          `invalid address!! ${NumUtils.toHexString(cpuAddress)}`
+        );
     }
   }
 
-  public writeFromCPU(cpuAddress: Bit16, data: Bit8) {
-    switch (cpuAddress.toNumber()) {
+  public writeFromCPU(cpuAddress: number, data: number) {
+    switch (cpuAddress) {
       case 0x2000:
         this.setPPUCTRL(data);
         break;
@@ -179,12 +181,14 @@ export default class PPU {
         this.setPPUDATA(data);
         break;
       default:
-        throw new Error(`invalid address!! ${cpuAddress.toHexString()}`);
+        throw new Error(
+          `invalid address!! ${NumUtils.toHexString(cpuAddress)}`
+        );
     }
   }
 
   // $4014
-  public writeOAMData(data: Bit8[]) {
+  public writeOAMData(data: number[]) {
     data.forEach((item, index) => {
       this.oam.set(index, item);
     });
@@ -202,36 +206,35 @@ export default class PPU {
     return !!this.registers.ppuctrl.vBlankOnNMI;
   }
 
-  private readPPU(ppuAddress: Bit16): Bit8 {
-    const addressValue = ppuAddress.toNumber();
+  private readPPU(ppuAddress: number): number {
     // $0000-$0FFF	$1000	Pattern table 0	Cartridge
     // $1000-$1FFF	$1000	Pattern table 1	Cartridge
     // $3000-$3EFF	$0F00	Unused	Cartridge
-    if (addressValue <= 0x1fff) {
-      return new Bit8(this.chrom[addressValue]);
+    if (ppuAddress <= 0x1fff) {
+      return this.chrom[ppuAddress];
     }
 
     // $2000-$23BF	$0400	Nametable 0	Cartridge
     // $2400-$27FF	$0400	Nametable 1	Cartridge
     // $2800-$2BFF	$0400	Nametable 2	Cartridge
     // $2C00-$2FFF	$0400	Nametable 3	Cartridge
-    if (addressValue >= 0x2000 && addressValue <= 0x2fff) {
+    if (ppuAddress >= 0x2000 && ppuAddress <= 0x2fff) {
       return this.vram.get(ppuAddress);
     }
 
     // $3F00-$3F1F	$0020	Palette RAM indexes	Internal to PPU
     // $3F20-$3FFF	$00E0	Mirrors of $3F00-$3F1F	Internal to PPU
-    if (addressValue >= 0x3f00 && addressValue <= 0x3fff) {
-      const mod = addressValue % 0x20;
-      return this.vram.get(new Bit16(0x3f00).add(mod));
+    if (ppuAddress >= 0x3f00 && ppuAddress <= 0x3fff) {
+      const mod = ppuAddress % 0x20;
+      return this.vram.get(0x3f00 + mod);
     }
 
-    throw new Error(`invalid ppu address ${ppuAddress.toHexString()}`);
+    throw new Error(`invalid ppu address ${NumUtils.toHexString(ppuAddress)}`);
   }
 
-  private setPPUCTRL(data: Bit8) {
-    const zero = data.getNthBit(0);
-    const one = data.getNthBit(1);
+  private setPPUCTRL(data: number) {
+    const zero = NumUtils.getNthBit(data, 0);
+    const one = NumUtils.getNthBit(data, 1);
 
     if (!zero && !one) {
       this.registers.ppuctrl.mainScreen = 0;
@@ -242,54 +245,57 @@ export default class PPU {
     } else if (zero && one) {
       this.registers.ppuctrl.mainScreen = 3;
     }
-    this.registers.ppuctrl.addressMode = data.getNthBit(2);
-    this.registers.ppuctrl.spriteChrTable = data.getNthBit(3);
-    this.registers.ppuctrl.bgChrTable = data.getNthBit(4);
-    this.registers.ppuctrl.isSpriteSize8x16 = data.getNthBit(5);
-    this.registers.ppuctrl.isSlave = data.getNthBit(6);
-    this.registers.ppuctrl.vBlankOnNMI = data.getNthBit(7);
+    this.registers.ppuctrl.addressMode = NumUtils.getNthBit(data, 2);
+    this.registers.ppuctrl.spriteChrTable = NumUtils.getNthBit(data, 3);
+    this.registers.ppuctrl.bgChrTable = NumUtils.getNthBit(data, 4);
+    this.registers.ppuctrl.isSpriteSize8x16 = NumUtils.getNthBit(data, 5);
+    this.registers.ppuctrl.isSlave = NumUtils.getNthBit(data, 6);
+    this.registers.ppuctrl.vBlankOnNMI = NumUtils.getNthBit(data, 7);
   }
 
-  private setPPUMASK(data: Bit8) {
-    this.registers.ppumask.grayscale = data.getNthBit(0);
-    this.registers.ppumask.showBGInLeftmost8PixelsOfScreen = data.getNthBit(1);
+  private setPPUMASK(data: number) {
+    this.registers.ppumask.grayscale = NumUtils.getNthBit(data, 0);
+    this.registers.ppumask.showBGInLeftmost8PixelsOfScreen = NumUtils.getNthBit(
+      data,
+      1
+    );
     this.registers.ppumask.showSpritesInLeftmost8PixelsOfScreen =
-      data.getNthBit(2);
-    this.registers.ppumask.showBG = data.getNthBit(3);
-    this.registers.ppumask.showSprite = data.getNthBit(4);
-    this.registers.ppumask.emphasizeBlue = data.getNthBit(5);
-    this.registers.ppumask.emphasizeGreen = data.getNthBit(6);
-    this.registers.ppumask.emphasizeRed = data.getNthBit(7);
+      NumUtils.getNthBit(data, 2);
+    this.registers.ppumask.showBG = NumUtils.getNthBit(data, 3);
+    this.registers.ppumask.showSprite = NumUtils.getNthBit(data, 4);
+    this.registers.ppumask.emphasizeBlue = NumUtils.getNthBit(data, 5);
+    this.registers.ppumask.emphasizeGreen = NumUtils.getNthBit(data, 6);
+    this.registers.ppumask.emphasizeRed = NumUtils.getNthBit(data, 7);
   }
 
-  private setOAMADDR(data: Bit8) {
+  private setOAMADDR(data: number) {
     this.registers.oamaddr.set(data);
   }
 
-  private setPPUSCROLL(data: Bit8) {
+  private setPPUSCROLL(data: number) {
     const isFirstWrite = this.registers.w === 0;
     if (isFirstWrite) {
-      const temp = Bit16.fromBytes(new Bit8(0), data);
+      const temp = NumUtils.fromBytes(0, data);
       this.registers.ppuscroll.set(temp);
     } else {
-      const ppuscroll = this.registers.ppuscroll.get().add(data);
+      const ppuscroll = this.registers.ppuscroll.get() + data;
       this.registers.ppuscroll.set(ppuscroll);
     }
   }
 
-  private setPPUADDR(data: Bit8) {
+  private setPPUADDR(data: number) {
     const isFirstWrite = this.registers.w === 0;
     if (isFirstWrite) {
-      const temp = Bit16.fromBytes(new Bit8(0), data);
+      const temp = NumUtils.fromBytes(0, data);
       this.registers.ppuaddr.set(temp);
       this.registers.w = 1;
     } else {
-      const ppuaddress = this.registers.ppuaddr.get().add(data);
+      const ppuaddress = this.registers.ppuaddr.get() + data;
       this.registers.ppuaddr.set(ppuaddress);
     }
   }
 
-  private setPPUDATA(data: Bit8) {
+  private setPPUDATA(data: number) {
     this.registers.w = 0;
     this.vram.set(this.registers.ppuaddr.get(), data);
     this.incrementPPUADDR();
@@ -313,12 +319,12 @@ export default class PPU {
     status = (status << 1) | Number(unwritableVRAM);
     // 3-0 未使用
     status = status << 4;
-    this.registers.ppustatus.set(new Bit8(status));
+    this.registers.ppustatus.set(status);
   }
 
-  private setOAMDATA(data: Bit8) {}
+  private setOAMDATA(data: number) {}
 
-  private getPPUSTATUS(): Bit8 {
+  private getPPUSTATUS(): number {
     this.registers.w = 0;
     return this.registers.ppustatus.get();
   }
@@ -334,22 +340,21 @@ export default class PPU {
   private incrementPPUADDR() {
     const currentAddress = this.registers.ppuaddr.get();
     const increment = this.registers.ppuctrl.addressMode === 1 ? 32 : 1;
-    this.registers.ppuaddr.set(currentAddress.add(increment));
+    this.registers.ppuaddr.set(currentAddress + increment);
   }
 
   private renderSprite8x8(
     display: Uint8Array,
-    tile: Bit8,
-    attr: Bit8,
+    tile: number,
+    attr: number,
     renderingStartIndex: number
   ) {
-    const tileId = tile.toNumber();
     const tableNum = this.registers.ppuctrl.spriteChrTable ? 0x1000 : 0x0000;
 
     for (let y = 0; y < 8; y++) {
-      const chromAddress = tileId * 16 + tableNum + (y % 8);
-      const byte1 = this.readPPU(new Bit16(chromAddress)).toNumber();
-      const byte2 = this.readPPU(new Bit16(chromAddress + 8)).toNumber();
+      const chromAddress = tile * 16 + tableNum + (y % 8);
+      const byte1 = this.readPPU(chromAddress);
+      const byte2 = this.readPPU(chromAddress + 8);
 
       let displayIndex = renderingStartIndex + y * 256 * 4;
 
@@ -369,20 +374,21 @@ export default class PPU {
 
   private renderSprite8x16(
     display: Uint8Array,
-    tile: Bit8,
-    attr: Bit8,
+    tile: number,
+    attr: number,
     renderingStartIndex: number
   ) {
-    const tableNum = tile.getNthBit(0);
-    const upperTileId = (tile.toNumber() >> 1) * 2;
+    const tableNum = NumUtils.getNthBit(tile, 0);
+    const upperTileId = (tile >> 1) * 2;
     const lowerTileId = upperTileId + 1;
-    const palette = (attr.getNthBit(1) >> 1) | attr.getNthBit(0);
+    const palette =
+      (NumUtils.getNthBit(attr, 1) >> 1) | NumUtils.getNthBit(attr, 0);
 
     for (let y = 0; y < 16; y++) {
       const tileId = y < 8 ? upperTileId : lowerTileId;
       const chromAddress = tileId * 16 + tableNum * 0x1000 + (y % 8);
-      const byte1 = this.readPPU(new Bit16(chromAddress)).toNumber();
-      const byte2 = this.readPPU(new Bit16(chromAddress + 8)).toNumber();
+      const byte1 = this.readPPU(chromAddress);
+      const byte2 = this.readPPU(chromAddress + 8);
 
       let displayIndex = renderingStartIndex + y * 256 * 4;
 

@@ -1,4 +1,4 @@
-import { Bit16, Bit8 } from "./bit";
+import NumUtils from "./NumUtils";
 import { Bit8Register } from "./registers";
 
 type Registers = {
@@ -58,53 +58,55 @@ type Registers = {
 export default class APU {
   private registers: Registers = {
     pulse1: {
-      r1: new Bit8Register(new Bit8(0)),
-      r2: new Bit8Register(new Bit8(0)),
-      r3: new Bit8Register(new Bit8(0)),
-      r4: new Bit8Register(new Bit8(0)),
+      r1: new Bit8Register(0),
+      r2: new Bit8Register(0),
+      r3: new Bit8Register(0),
+      r4: new Bit8Register(0),
     },
     pulse2: {
-      r1: new Bit8Register(new Bit8(0)),
-      r2: new Bit8Register(new Bit8(0)),
-      r3: new Bit8Register(new Bit8(0)),
-      r4: new Bit8Register(new Bit8(0)),
+      r1: new Bit8Register(0),
+      r2: new Bit8Register(0),
+      r3: new Bit8Register(0),
+      r4: new Bit8Register(0),
     },
     tri: {
-      r1: new Bit8Register(new Bit8(0)),
-      r2: new Bit8Register(new Bit8(0)),
-      r3: new Bit8Register(new Bit8(0)),
+      r1: new Bit8Register(0),
+      r2: new Bit8Register(0),
+      r3: new Bit8Register(0),
     },
     noise: {
-      r1: new Bit8Register(new Bit8(0)),
-      r2: new Bit8Register(new Bit8(0)),
-      r3: new Bit8Register(new Bit8(0)),
+      r1: new Bit8Register(0),
+      r2: new Bit8Register(0),
+      r3: new Bit8Register(0),
     },
     dmc: {
-      r1: new Bit8Register(new Bit8(0)),
-      r2: new Bit8Register(new Bit8(0)),
-      r3: new Bit8Register(new Bit8(0)),
-      r4: new Bit8Register(new Bit8(0)),
-      r5: new Bit8Register(new Bit8(0)),
-      r6: new Bit8Register(new Bit8(0)),
+      r1: new Bit8Register(0),
+      r2: new Bit8Register(0),
+      r3: new Bit8Register(0),
+      r4: new Bit8Register(0),
+      r5: new Bit8Register(0),
+      r6: new Bit8Register(0),
     },
-    frameCounter: new Bit8Register(new Bit8(0)),
+    frameCounter: new Bit8Register(0),
   };
 
   constructor() {}
 
-  public read(cpuAddress: Bit16): Bit8 {
-    switch (cpuAddress.toNumber()) {
+  public read(cpuAddress: number): number {
+    switch (cpuAddress) {
       default:
         console.error(
-          `invalid address!! ${cpuAddress.toHexString()}!! implement apu`
+          `invalid address!! ${NumUtils.toHexString(
+            cpuAddress
+          )}!! implement apu`
         );
-        return new Bit8(0);
+        return 0;
       // throw new Error(`invalid address!! ${cpuAddress.toHexString()}`);
     }
   }
 
-  public write(cpuAddress: Bit16, data: Bit8) {
-    switch (cpuAddress.toNumber()) {
+  public write(cpuAddress: number, data: number) {
+    switch (cpuAddress) {
       case 0x4000:
         this.registers.pulse1.r1.set(data);
         break;
@@ -167,7 +169,9 @@ export default class APU {
         break;
 
       default:
-        throw new Error(`invalid address!! ${cpuAddress.toHexString()}`);
+        throw new Error(
+          `invalid address!! ${NumUtils.toHexString(cpuAddress)}`
+        );
     }
   }
 }

@@ -1,36 +1,35 @@
-import { Bit16, Bit8 } from "./bit";
-
 export class TestLogger {
   private lineNo = 0;
   private lineLog: string[] = [];
   private lineOpCodeLog: string[] = [];
 
-  push(str: Bit8 | Bit16 | string) {
-    if (str instanceof Bit8 || str instanceof Bit16) {
-      this.lineLog.push(str.toHexString().toUpperCase());
+  push(str: string | number) {
+    if (typeof str === "number") {
+      this.lineLog.push(str.toString(16).padStart(4, "0").toUpperCase());
       return;
     }
 
     this.lineLog.push(str.toUpperCase());
   }
 
-  pushOpCode(str: Bit8 | Bit16) {
-    this.lineOpCodeLog.push(str.toHexString().toUpperCase());
+  pushOpCode(opcode: number) {
+    this.lineOpCodeLog.push(opcode.toString(16).padStart(2, "0").toUpperCase());
   }
 
   break() {
     this.lineLog.splice(1, 0, ...this.lineOpCodeLog);
     const lineLogStr = this.lineLog.join(",");
 
-    // if (lineLogStr !== NESTEST_EXPECT[this.lineNo]) {
-    //   console.log(
-    //     `test failed!! line${this.lineNo}\nexpect: ${
-    //       NESTEST_EXPECT[this.lineNo]
-    //     }\nresult:  ${lineLogStr}`
-    //   );
-    // } else {
-    //   console.log(`test pass: ${NESTEST_EXPECT[this.lineNo]}`);
-    // }
+    if (lineLogStr !== NESTEST_EXPECT[this.lineNo]) {
+      console.log(
+        `test failed!! line${this.lineNo}\nexpect: ${
+          NESTEST_EXPECT[this.lineNo]
+        }\nresult:  ${lineLogStr}`
+      );
+      throw new Error("x");
+    } else {
+      console.log(`test pass: ${NESTEST_EXPECT[this.lineNo]}`);
+    }
 
     // console.log(lineLogStr);
     this.lineLog = [];

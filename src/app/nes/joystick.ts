@@ -1,4 +1,4 @@
-import { Bit8 } from "./bit";
+import NumUtils from "./NumUtils";
 import { Bit8Register } from "./registers";
 
 export default class JoyStick {
@@ -13,11 +13,11 @@ export default class JoyStick {
     select: false,
     start: false,
   };
-  private register = new Bit8Register(new Bit8(0));
+  private register = new Bit8Register(0);
 
-  public write(data: Bit8) {
+  public write(data: number) {
     this.register.set(data);
-    if (data.getNthBit(1)) {
+    if (NumUtils.getNthBit(data, 1)) {
       this.keyCounter = 0;
     }
   }
@@ -25,8 +25,8 @@ export default class JoyStick {
   public read() {
     const keyPressed = this.getKeyStatus() ? 1 : 0;
     this.incKeyCounter();
-    const value = this.register.get().toNumber() | keyPressed;
-    return new Bit8(value);
+    const value = this.register.get() | keyPressed;
+    return value;
   }
 
   public ctrlUp(pressed: boolean) {
