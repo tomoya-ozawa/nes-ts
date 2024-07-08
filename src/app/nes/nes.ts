@@ -247,10 +247,10 @@ export default class NES {
       return;
     }
 
-    console.error(
-      `unimplemented memory map writeByCPU: ${address.toString(16)}`
-    );
-
+    // TODO: write c000, c001, e000, e001の実装
+    // console.error(
+    //   `unimplemented memory map writeByCPU: ${address.toString(16)}`
+    // );
     // throw new Error(
     //   `unimplemented memory map writeByCPU: ${address.toHexString()}`
     // );
