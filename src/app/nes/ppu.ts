@@ -386,6 +386,9 @@ export default class PPU {
     renderingStartIndex: number
   ) {
     const tableNum = this.registers.ppuctrl.spriteChrTable ? 0x1000 : 0x0000;
+    const paletteId =
+      (NumUtils.getNthBit(attr, 1) >> 1) | NumUtils.getNthBit(attr, 0);
+    const palette = this.getPalette(paletteId);
 
     for (let y = 0; y < 8; y++) {
       const chromAddress = tile * 16 + tableNum + (y % 8);
@@ -397,12 +400,17 @@ export default class PPU {
       for (let bit = 0; bit < 8; bit++) {
         const bit1 = (byte1 >> (7 - bit)) & 1;
         const bit2 = (byte2 >> (7 - bit)) & 1;
-        // グレースケールの色値
-        const color = (bit1 + (bit2 << 1)) * 85;
-        display[displayIndex] = color;
-        display[displayIndex + 1] = color;
-        display[displayIndex + 2] = color;
-        display[displayIndex + 3] = 1;
+
+        const paletteIndex = bit1 + (bit2 << 1);
+
+        if (paletteIndex !== 0) {
+          const palletNo = palette[paletteIndex];
+          display[displayIndex] = palletNo[0];
+          display[displayIndex + 1] = palletNo[1];
+          display[displayIndex + 2] = palletNo[2];
+          display[displayIndex + 3] = 1;
+        }
+
         displayIndex = displayIndex + 4;
       }
     }
@@ -417,6 +425,8 @@ export default class PPU {
     const tableNum = NumUtils.getNthBit(tile, 0);
     const upperTileId = (tile >> 1) * 2;
     const lowerTileId = upperTileId + 1;
+    // TODO: 優先度の実装
+    const priority = NumUtils.getNthBit(attr, 5);
     const paletteId =
       (NumUtils.getNthBit(attr, 1) >> 1) | NumUtils.getNthBit(attr, 0);
     const palette = this.getPalette(paletteId);
