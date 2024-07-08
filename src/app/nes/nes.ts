@@ -230,7 +230,8 @@ export default class NES {
 
     // $4000–$4017	$0018	NES APU and I/O registers
     if (address >= 0x4000 && address <= 0x4015) {
-      this.apu.write(address, data);
+      // TODO: apuの実装
+      // this.apu.write(address, data);
       return;
     }
 
@@ -246,9 +247,9 @@ export default class NES {
       return;
     }
 
-    // console.error(
-    //   `unimplemented memory map writeByCPU: ${address.toHexString()}`
-    // );
+    console.error(
+      `unimplemented memory map writeByCPU: ${address.toString(16)}`
+    );
 
     // throw new Error(
     //   `unimplemented memory map writeByCPU: ${address.toHexString()}`
