@@ -466,10 +466,11 @@ export default class PPU {
     [number, number, number],
     [number, number, number]
   ] {
+    const gbColor = this.readPPU(0x3f00);
     // $3F11-$3F13	Sprite palette 0
     if (id === 0) {
       return [
-        [this.readPPU(0x3f00), this.readPPU(0x3f00), this.readPPU(0x3f00)],
+        [gbColor, gbColor, gbColor],
         PALETTE[this.readPPU(0x3f11)],
         PALETTE[this.readPPU(0x3f12)],
         PALETTE[this.readPPU(0x3f13)],
@@ -478,7 +479,7 @@ export default class PPU {
     // $3F15-$3F17	Sprite palette 1
     if (id === 1) {
       return [
-        [this.readPPU(0x3f00), this.readPPU(0x3f00), this.readPPU(0x3f00)],
+        [gbColor, gbColor, gbColor],
         PALETTE[this.readPPU(0x3f15)],
         PALETTE[this.readPPU(0x3f16)],
         PALETTE[this.readPPU(0x3f17)],
@@ -487,7 +488,7 @@ export default class PPU {
     // $3F19-$3F1B	Sprite palette 2
     if (id === 2) {
       return [
-        [this.readPPU(0x3f00), this.readPPU(0x3f00), this.readPPU(0x3f00)],
+        [gbColor, gbColor, gbColor],
         PALETTE[this.readPPU(0x3f19)],
         PALETTE[this.readPPU(0x3f1a)],
         PALETTE[this.readPPU(0x3f1b)],
@@ -496,7 +497,7 @@ export default class PPU {
     // $3F1D-$3F1F	Sprite palette 3
     if (id === 3) {
       return [
-        [this.readPPU(0x3f00), this.readPPU(0x3f00), this.readPPU(0x3f00)],
+        [gbColor, gbColor, gbColor],
         PALETTE[this.readPPU(0x3f1d)],
         PALETTE[this.readPPU(0x3f1e)],
         PALETTE[this.readPPU(0x3f1f)],
