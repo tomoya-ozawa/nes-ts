@@ -1,4 +1,5 @@
 import NumUtils from "./NumUtils";
+import PALETTE from "./palettes";
 import RAM from "./ram";
 import { Bit16Register, Bit8Register } from "./registers";
 
@@ -225,11 +226,46 @@ export default class PPU {
     // $3F00-$3F1F	$0020	Palette RAM indexes	Internal to PPU
     // $3F20-$3FFF	$00E0	Mirrors of $3F00-$3F1F	Internal to PPU
     if (ppuAddress >= 0x3f00 && ppuAddress <= 0x3fff) {
-      const mod = ppuAddress % 0x20;
-      return this.vram.get(0x3f00 + mod);
+      const fixedAddress = this.fixPPUAddress(ppuAddress);
+      return this.vram.get(fixedAddress);
     }
 
     throw new Error(`invalid ppu address ${NumUtils.toHexString(ppuAddress)}`);
+  }
+
+  private fixPPUAddress(ppuAddress: number): number {
+    const mod = ppuAddress % 0x20;
+    let fixedAddress = 0x3f00 + mod;
+    // $3F00	Universal background color
+    // $3F01-$3F03	Background palette 0
+    // $3F04	Normally unused color 1
+    // $3F05-$3F07	Background palette 1
+    // $3F08	Normally unused color 2
+    // $3F09-$3F0B	Background palette 2
+    // $3F0C	Normally unused color 3
+    // $3F0D-$3F0F	Background palette 3
+    // $3F10	Mirror of universal background color
+    // $3F11-$3F13	Sprite palette 0
+    // $3F14	Mirror of unused color 1
+    // $3F15-$3F17	Sprite palette 1
+    // $3F18	Mirror of unused color 2
+    // $3F19-$3F1B	Sprite palette 2
+    // $3F1C	Mirror of unused color 3
+    // $3F1D-$3F1F	Sprite palette 3
+    if (fixedAddress === 0x3f10) {
+      return 0x3f00;
+    }
+    if (fixedAddress === 0x3f14) {
+      return 0x3f04;
+    }
+    if (fixedAddress === 0x3f18) {
+      return 0x3f08;
+    }
+    if (fixedAddress === 0x3f1c) {
+      return 0x3f0c;
+    }
+
+    return fixedAddress;
   }
 
   private setPPUCTRL(data: number) {
@@ -381,8 +417,9 @@ export default class PPU {
     const tableNum = NumUtils.getNthBit(tile, 0);
     const upperTileId = (tile >> 1) * 2;
     const lowerTileId = upperTileId + 1;
-    const palette =
+    const paletteId =
       (NumUtils.getNthBit(attr, 1) >> 1) | NumUtils.getNthBit(attr, 0);
+    const palette = this.getPalette(paletteId);
 
     for (let y = 0; y < 16; y++) {
       const tileId = y < 8 ? upperTileId : lowerTileId;
@@ -395,14 +432,67 @@ export default class PPU {
       for (let bit = 0; bit < 8; bit++) {
         const bit1 = (byte1 >> (7 - bit)) & 1;
         const bit2 = (byte2 >> (7 - bit)) & 1;
-        // グレースケールの色値
-        const color = (bit1 + (bit2 << 1)) * 85;
-        display[displayIndex] = color;
-        display[displayIndex + 1] = color;
-        display[displayIndex + 2] = color;
-        display[displayIndex + 3] = 1;
+
+        const paletteIndex = bit1 + (bit2 << 1);
+
+        if (paletteIndex !== 0) {
+          const palletNo = palette[paletteIndex];
+          display[displayIndex] = palletNo[0];
+          display[displayIndex + 1] = palletNo[1];
+          display[displayIndex + 2] = palletNo[2];
+          display[displayIndex + 3] = 1;
+        }
+
         displayIndex = displayIndex + 4;
       }
     }
+  }
+
+  private getPalette(
+    id: number
+  ): [
+    [number, number, number],
+    [number, number, number],
+    [number, number, number],
+    [number, number, number]
+  ] {
+    // $3F11-$3F13	Sprite palette 0
+    if (id === 0) {
+      return [
+        [this.readPPU(0x3f00), this.readPPU(0x3f00), this.readPPU(0x3f00)],
+        PALETTE[this.readPPU(0x3f11)],
+        PALETTE[this.readPPU(0x3f12)],
+        PALETTE[this.readPPU(0x3f13)],
+      ];
+    }
+    // $3F15-$3F17	Sprite palette 1
+    if (id === 1) {
+      return [
+        [this.readPPU(0x3f00), this.readPPU(0x3f00), this.readPPU(0x3f00)],
+        PALETTE[this.readPPU(0x3f15)],
+        PALETTE[this.readPPU(0x3f16)],
+        PALETTE[this.readPPU(0x3f17)],
+      ];
+    }
+    // $3F19-$3F1B	Sprite palette 2
+    if (id === 2) {
+      return [
+        [this.readPPU(0x3f00), this.readPPU(0x3f00), this.readPPU(0x3f00)],
+        PALETTE[this.readPPU(0x3f19)],
+        PALETTE[this.readPPU(0x3f1a)],
+        PALETTE[this.readPPU(0x3f1b)],
+      ];
+    }
+    // $3F1D-$3F1F	Sprite palette 3
+    if (id === 3) {
+      return [
+        [this.readPPU(0x3f00), this.readPPU(0x3f00), this.readPPU(0x3f00)],
+        PALETTE[this.readPPU(0x3f1d)],
+        PALETTE[this.readPPU(0x3f1e)],
+        PALETTE[this.readPPU(0x3f1f)],
+      ];
+    }
+
+    throw new Error(`invalid palette id ${id}`);
   }
 }
