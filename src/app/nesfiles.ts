@@ -263,6 +263,7 @@ const nesfiles = [
   "nesrom/nes-test-roms/window5/colorwin_ntsc.nes",
   "nesrom/nes-test-roms/window5/colorwin_pal.nes",
   "nesrom/tkshoot/SHOOT.nes",
+  "nesrom/mapwalker/MapWalker.nes",
   "sample1.nes",
 ];
 
