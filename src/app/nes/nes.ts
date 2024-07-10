@@ -171,6 +171,13 @@ export default class NES {
       return this.joystick.read();
     }
 
+    if (address === 0x4017) {
+      // TODO: 2Pのコントローラーを実装する
+      // https://www.nesdev.org/wiki/$4017
+      return 0;
+      // return this.joystick.read();
+    }
+
     // $4018–$401F$0008	APU and I/O functionality that is normally disabled. See CPU Test Mode.
     // $4020–$FFFF $BFE0 Unmapped. Available for cartridge use.
     // $6000–$7FFF $2000 Usually cartridge RAM, when present.
