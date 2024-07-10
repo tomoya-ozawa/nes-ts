@@ -152,8 +152,7 @@ export default class PPU {
       case 0x2002:
         return this.getPPUSTATUS();
       case 0x2007:
-        throw new Error("IMPLEMENT 0x2007");
-      // return this.getPPUDATA();
+        return this.getPPUDATA();
       default:
         throw new Error(
           `invalid address!! ${NumUtils.toHexString(cpuAddress)}`
@@ -368,11 +367,10 @@ export default class PPU {
   }
 
   private getPPUDATA() {
-    throw new Error("implement this!!");
-    // this.registers.w = 0;
-    // const data = this.vram.get(this.registers.ppuaddr.get());
-    // this.incrementPPUADDR();
-    // return data;
+    this.registers.w = 0;
+    const data = this.vram.get(this.registers.ppuaddr.get());
+    this.incrementPPUADDR();
+    return data;
   }
 
   private incrementPPUADDR() {
